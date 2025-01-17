@@ -1,13 +1,16 @@
 #include <raylib.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
 
-Vector2 textSize(char* text, float fontSize);
+#define TEXT_SIZE 40.
+#define TEXT_COLOR BLACK
 
-int main()
-{
+Vector2 centerTextPos(char* text);
+
+int main() {
     // SETUP
     const char* title = "funk-txt";
 
@@ -15,19 +18,19 @@ int main()
     SetTargetFPS(60);
 
     // TEXT
-    int textRowSize = 0;
-    int textColSize = 0;
-    char* text = malloc(sizeof(char) * 0); // to be cols * rows
+    char* text = "funk";
+    Vector2 textPos = centerTextPos(text);
 
     // RENDER
-    while(!WindowShouldClose())
-    {
+    while(!WindowShouldClose()) {
         if(IsKeyPressed(KEY_ESCAPE)) return 0;
 
         // DRAW
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
+
+        DrawText(text, textPos.x, textPos.y, TEXT_SIZE, TEXT_COLOR);
 
         EndDrawing();
     }
@@ -37,6 +40,11 @@ int main()
     return 0;
 }
 
-Vector2 textSize(char* text, float fontSize) {
-    return MeasureTextEx(GetFontDefault(), text, fontSize, fontSize / 10);
+Vector2 centerTextPos(char* text) {
+    Vector2 textSize = MeasureTextEx(GetFontDefault(), text, TEXT_SIZE, (float)TEXT_SIZE / 10);
+
+    textSize.x = ((float) SCREEN_WIDTH - textSize.x) / 2;
+    textSize.y = ((float) SCREEN_HEIGHT - textSize.y) / 2;
+
+    return textSize;
 }
