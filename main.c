@@ -1,5 +1,6 @@
 #include <math.h>
 #include <raylib.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -10,6 +11,7 @@
 #define TEXT_SIZE 300.
 #define TEXT_COLOR RAYWHITE
 
+Vector2 centerTextLastCharPos(char* text, float textSize);
 Vector2 centerTextPos(char* text, float textSize);
 float textSizeFromLen(int textLen);
 char* textHandler(char* text);
@@ -25,11 +27,18 @@ int main() {
     char* text = malloc(sizeof(char) * 1);
     text[0] = '\0';
     float textSize = textSizeFromLen(strlen(text));
-    Vector2 textPos = centerTextPos(text, textSize);
+    Vector2 textPos = centerTextLastCharPos(text, textSize);
+
+    // FILE
+    FILE* f = fopen("txt", "w+");
 
     // RENDER
     while(!WindowShouldClose()) {
         if(IsKeyPressed(KEY_ESCAPE)) return 0;
+
+        if((IsKeyDown(KEY_C) || IsKeyDown(KEY_LEFT_CONTROL)) && IsKeyDown(KEY_S)) {
+            fprintf(f, "%s", text);
+        }
 
         char*changedText = textHandler(text);
         if(changedText != text) {
@@ -38,14 +47,14 @@ int main() {
         }
 
         textSize = textSizeFromLen(strlen(text));
-        textPos = centerTextPos(text, textSize);
+        textPos = centerTextLastCharPos(text, textSize);
 
         // DRAW
         BeginDrawing();
 
         ClearBackground(BLACK);
 
-        DrawText(text, textPos.x, textPos.y, textSize, TEXT_COLOR);
+        DrawTextEx(GetFontDefault(), text, (Vector2) {textPos.x, textPos.y}, textSize, textSize / 10, TEXT_COLOR);
 
         EndDrawing();
     }
@@ -57,11 +66,12 @@ int main() {
     return 0;
 }
 
-Vector2 centerTextPos(char* text, float textSize) {
+Vector2 centerTextLastCharPos(char* text, float textSize) {
     Vector2 size = MeasureTextEx(GetFontDefault(), text, textSize, textSize / 10);
 
-    char* lastChar = malloc(sizeof(char));
+    char* lastChar = malloc(sizeof(char) * 2);
     lastChar[0] = text[strlen(text) - 1];
+    lastChar[1] = '\0';
 
     size.x = ((float) SCREEN_WIDTH + MeasureTextEx(GetFontDefault(), lastChar, textSize, textSize / 10).x) / 2 - size.x;
     size.y = ((float) SCREEN_HEIGHT - size.y) / 2;
@@ -70,7 +80,17 @@ Vector2 centerTextPos(char* text, float textSize) {
     return size;
 }
 
+Vector2 centerTextPos(char* text, float textSize) {
+    Vector2 size = MeasureTextEx(GetFontDefault(), text, textSize, textSize / 10);
+
+    size.x = ((float) SCREEN_WIDTH - size.x) / 2;
+    size.y = ((float) SCREEN_HEIGHT - size.y) / 2;
+
+    return size;
+}
+
 float textSizeFromLen(int textLen) {
+    if (textLen <= 0) return TEXT_SIZE;
     return TEXT_SIZE * ((float)1 / log2f((float) (textLen + 1)));
 }
 
@@ -79,9 +99,18 @@ char* textHandler(char* text) {
     if(IsKeyPressed(KEY_BACKSPACE) && textLen > 0) {
         char* changedText = malloc(sizeof(char) * (textLen));
         memcpy(changedText, text, textLen - 1);
+
         changedText[textLen - 1] = '\0';
 
-        printf("\n\n %s \n\n", changedText);
+        return changedText;
+    }
+
+    if(IsKeyPressed(KEY_SPACE)) {
+        char* changedText = malloc(sizeof(char) * (textLen + 2));
+        memcpy(changedText, text, textLen);
+
+        changedText[textLen] = ' ';
+        changedText[textLen + 1] = '\0';
 
         return changedText;
     }
@@ -92,8 +121,6 @@ char* textHandler(char* text) {
 
         changedText[textLen] = GetKeyPressed();
         changedText[textLen + 1] = '\0';
-
-        printf("\n\n %s \n\n", changedText);
 
         return changedText;
     }
