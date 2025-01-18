@@ -11,10 +11,16 @@
 #define TEXT_SIZE 300.
 #define TEXT_COLOR RAYWHITE
 
+#define CURSOR_RATE 30
+
+int count = 0;
+bool show = true;
+
 Vector2 centerTextLastCharPos(char* text, float textSize);
 Vector2 centerTextPos(char* text, float textSize);
 float textSizeFromLen(int textLen);
 char* textHandler(char* text);
+void showCursor(char* cursor, Vector2 cursorPos, float textSize);
 
 int main() {
     // SETUP
@@ -28,6 +34,10 @@ int main() {
     text[0] = '\0';
     float textSize = textSizeFromLen(strlen(text));
     Vector2 textPos = centerTextLastCharPos(text, textSize);
+
+    // CURSOR
+    char* cursor = "|";
+    Vector2 cursorPos = centerTextPos(cursor, textSize);
 
     // FILE
     FILE* f = fopen("txt", "w+");
@@ -44,10 +54,14 @@ int main() {
         if(changedText != text) {
             free(text);
             text = changedText;
+            show = true;
+            count = 0;
         }
 
         textSize = textSizeFromLen(strlen(text));
         textPos = centerTextLastCharPos(text, textSize);
+
+        cursorPos = centerTextPos(cursor, textSize);
 
         // DRAW
         BeginDrawing();
@@ -55,6 +69,8 @@ int main() {
         ClearBackground(BLACK);
 
         DrawTextEx(GetFontDefault(), text, (Vector2) {textPos.x, textPos.y}, textSize, textSize / 10, TEXT_COLOR);
+
+        showCursor(cursor, cursorPos, textSize);
 
         EndDrawing();
     }
@@ -69,14 +85,9 @@ int main() {
 Vector2 centerTextLastCharPos(char* text, float textSize) {
     Vector2 size = MeasureTextEx(GetFontDefault(), text, textSize, textSize / 10);
 
-    char* lastChar = malloc(sizeof(char) * 2);
-    lastChar[0] = text[strlen(text) - 1];
-    lastChar[1] = '\0';
-
-    size.x = ((float) SCREEN_WIDTH + MeasureTextEx(GetFontDefault(), lastChar, textSize, textSize / 10).x) / 2 - size.x;
+    size.x = ((float) SCREEN_WIDTH) / 2 - size.x;
     size.y = ((float) SCREEN_HEIGHT - size.y) / 2;
 
-    free(lastChar);
     return size;
 }
 
@@ -119,11 +130,34 @@ char* textHandler(char* text) {
         char* changedText = malloc(sizeof(char) * (textLen + 2));
         memcpy(changedText, text, textLen);
 
-        changedText[textLen] = GetKeyPressed();
+        changedText[textLen] = GetKeyPressed() + 32;
+        if(IsKeyDown(KEY_CAPS_LOCK)) changedText[textLen] -= 32;
         changedText[textLen + 1] = '\0';
 
         return changedText;
     }
 
     return text;
+}
+
+void showCursor(char* cursor, Vector2 cursorPos, float textSize) {
+    if (count < CURSOR_RATE && show) {
+        DrawTextEx(GetFontDefault(), cursor, cursorPos, textSize, textSize / 10, GREEN);
+        count++;
+        return;
+    }
+    else if (show) {
+        show = false;
+        count = 0;
+        return;
+    }
+    else if (count < CURSOR_RATE && !show) {
+        count++;
+        return;
+    }
+    else {
+        show = true;
+        count = 0;
+        return;
+    }
 }
