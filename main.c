@@ -8,7 +8,7 @@
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
 
-#define TEXT_SIZE 300.
+#define TEXT_SIZE 400.
 #define SPACING 0.05
 
 #define CURSOR_RATE 30
@@ -23,7 +23,7 @@
 int count = 0;
 bool show = true;
 
-Vector2 centerTextLastCharPos(char* text, float textSize, Font font);
+Vector2 centerTextLastCharPos(char* text, float textSize, Font font, int lines);
 Vector2 centerTextPos(char* text, float textSize, Font font);
 float textSizeFromLen(int textLen);
 char* textHandler(char* text);
@@ -41,9 +41,8 @@ int main() {
     char* text = malloc(sizeof(char) * 1);
     text[0] = '\0';
     float textSize = textSizeFromLen(strlen(text));
-    Font font = LoadFontEx("VictorMono-Medium.ttf", 2 * textSize, 0, 250);
-    Vector2 textPos = centerTextLastCharPos(text, textSize, font);
-
+    Font font = LoadFontEx("VictorMono-Regular.ttf", 2 * textSize, 0, 250);
+    Vector2 textPos = centerTextLastCharPos(text, textSize, font, 1);
 
     // CURSOR
     char* cursor = "|";
@@ -90,8 +89,16 @@ int main() {
             count = 0;
         }
 
+        int lines = 1;
+        char *linePointer = text;
+
+        while ((linePointer = strchr(linePointer, '\n')) != NULL) {
+            lines++;
+            linePointer++;
+        }
+
         textSize = textSizeFromLen(strlen(text));
-        textPos = centerTextLastCharPos(text, textSize, font);
+        textPos = centerTextLastCharPos(text, textSize, font, lines);
 
         cursorPos = centerTextPos(cursor, textSize, font);
 
@@ -117,7 +124,7 @@ int main() {
     return 0;
 }
 
-Vector2 centerTextLastCharPos(char* text, float textSize, Font font) {
+Vector2 centerTextLastCharPos(char* text, float textSize, Font font, int lines) {
     Vector2 size = MeasureTextEx(font, text, textSize, textSize * SPACING);
 
     size.x = ((float) SCREEN_WIDTH) / 2 - size.x - textSize * SPACING;
