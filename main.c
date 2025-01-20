@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <unistd.h>
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
@@ -18,6 +17,9 @@
 #define TEXT_COLOR (Color) RAYWHITE
 #define CURSOR_COLOR (Color) {0x6d,0x9d,0x97,0xff}
 
+#define BUF_SIZE 100
+#define FILE_NAME "txt"
+
 int count = 0;
 bool show = true;
 
@@ -26,6 +28,7 @@ Vector2 centerTextPos(char* text, float textSize, Font font);
 float textSizeFromLen(int textLen);
 char* textHandler(char* text);
 void showCursor(char* cursor, Vector2 cursorPos, float textSize, Font font);
+char* readTextFromFile(FILE* f);
 
 int main() {
     // SETUP
@@ -41,20 +44,42 @@ int main() {
     Font font = LoadFontEx("VictorMono-Medium.ttf", 2 * textSize, 0, 250);
     Vector2 textPos = centerTextLastCharPos(text, textSize, font);
 
+
     // CURSOR
     char* cursor = "|";
     Vector2 cursorPos = centerTextPos(cursor, textSize, font);
 
     // FILE
-    FILE* f = fopen("txt", "w");
+    FILE* f = fopen(FILE_NAME, "r+");
+
+    if (f == NULL) {
+        FILE* aux = fopen(FILE_NAME, "w");
+        fclose(aux);
+
+        f = fopen(FILE_NAME, "r+");
+    }
+
+    text = readTextFromFile(f);
 
     // RENDER
     while(!WindowShouldClose()) {
         if(IsKeyPressed(KEY_ESCAPE)) return 0;
 
         // TODO: File System is Terrible
-        if((IsKeyDown(KEY_C) || IsKeyDown(KEY_LEFT_CONTROL)) && IsKeyDown(KEY_S)) {
-            fprintf(f, "%s", text);
+        if(IsKeyDown(KEY_LEFT_CONTROL)) {
+            char* fileText;
+            if(IsKeyDown(KEY_S) && strcmp(fileText = readTextFromFile(f), text) != 0) {
+                free(fileText);
+                FILE* aux = fopen(FILE_NAME, "w");
+                if (aux != NULL){
+                    fprintf(aux, "%s", text);
+                    fclose(aux);
+                }
+            }
+            else if(IsKeyDown(KEY_X)) {
+                text = realloc(text, sizeof(char));
+                text[0] = '\0';
+            }
         }
 
         char*changedText = textHandler(text);
@@ -84,7 +109,10 @@ int main() {
 
     // TERMINATE
 
+    CloseWindow();
     free(text);
+    if (f) fclose(f);
+    UnloadFont(font);
 
     return 0;
 }
@@ -167,4 +195,22 @@ void showCursor(char* cursor, Vector2 cursorPos, float textSize, Font font) {
         count = 0;
         return;
     }
+}
+
+char* readTextFromFile(FILE* f) {
+    rewind(f); // so it starts from the beggining!!
+
+    char* fileText = NULL;
+    int ch;
+    int size = 0;
+    while((ch = fgetc(f)) != EOF) {
+        size++;
+        fileText = realloc(fileText, sizeof(char) * size);
+        fileText[size - 1] = ch;
+    }
+
+    fileText = realloc(fileText, sizeof(char) * (size + 1));
+    fileText[size] = '\0';
+
+    return fileText;
 }
