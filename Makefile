@@ -22,7 +22,6 @@ run:
 	$(CC) $(CFLAGS) $(SRCS) -o $(TARGET) $(LDFLAGS)
 	./main
 	rm -f $(TARGET)
-	rm -f txt
 
 # Clean target
 clean:

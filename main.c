@@ -4,23 +4,28 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
 
 #define TEXT_SIZE 300.
-#define TEXT_COLOR RAYWHITE
+#define SPACING 0.05
 
 #define CURSOR_RATE 30
+
+#define BACKGROUND_COLOR (Color) {0x1e,0x1e,0x1e,0xff}
+#define TEXT_COLOR (Color) RAYWHITE
+#define CURSOR_COLOR (Color) {0x6d,0x9d,0x97,0xff}
 
 int count = 0;
 bool show = true;
 
-Vector2 centerTextLastCharPos(char* text, float textSize);
-Vector2 centerTextPos(char* text, float textSize);
+Vector2 centerTextLastCharPos(char* text, float textSize, Font font);
+Vector2 centerTextPos(char* text, float textSize, Font font);
 float textSizeFromLen(int textLen);
 char* textHandler(char* text);
-void showCursor(char* cursor, Vector2 cursorPos, float textSize);
+void showCursor(char* cursor, Vector2 cursorPos, float textSize, Font font);
 
 int main() {
     // SETUP
@@ -33,19 +38,21 @@ int main() {
     char* text = malloc(sizeof(char) * 1);
     text[0] = '\0';
     float textSize = textSizeFromLen(strlen(text));
-    Vector2 textPos = centerTextLastCharPos(text, textSize);
+    Font font = LoadFontEx("VictorMono-Medium.ttf", 2 * textSize, 0, 250);
+    Vector2 textPos = centerTextLastCharPos(text, textSize, font);
 
     // CURSOR
     char* cursor = "|";
-    Vector2 cursorPos = centerTextPos(cursor, textSize);
+    Vector2 cursorPos = centerTextPos(cursor, textSize, font);
 
     // FILE
-    FILE* f = fopen("txt", "w+");
+    FILE* f = fopen("txt", "w");
 
     // RENDER
     while(!WindowShouldClose()) {
         if(IsKeyPressed(KEY_ESCAPE)) return 0;
 
+        // TODO: File System is Terrible
         if((IsKeyDown(KEY_C) || IsKeyDown(KEY_LEFT_CONTROL)) && IsKeyDown(KEY_S)) {
             fprintf(f, "%s", text);
         }
@@ -59,18 +66,18 @@ int main() {
         }
 
         textSize = textSizeFromLen(strlen(text));
-        textPos = centerTextLastCharPos(text, textSize);
+        textPos = centerTextLastCharPos(text, textSize, font);
 
-        cursorPos = centerTextPos(cursor, textSize);
+        cursorPos = centerTextPos(cursor, textSize, font);
 
         // DRAW
         BeginDrawing();
 
-        ClearBackground(BLACK);
+        ClearBackground(BACKGROUND_COLOR);
 
-        DrawTextEx(GetFontDefault(), text, (Vector2) {textPos.x, textPos.y}, textSize, textSize / 10, TEXT_COLOR);
+        DrawTextEx(font, text, (Vector2) {textPos.x, textPos.y}, textSize, textSize * SPACING, TEXT_COLOR);
 
-        showCursor(cursor, cursorPos, textSize);
+        showCursor(cursor, cursorPos, textSize, font);
 
         EndDrawing();
     }
@@ -82,17 +89,17 @@ int main() {
     return 0;
 }
 
-Vector2 centerTextLastCharPos(char* text, float textSize) {
-    Vector2 size = MeasureTextEx(GetFontDefault(), text, textSize, textSize / 10);
+Vector2 centerTextLastCharPos(char* text, float textSize, Font font) {
+    Vector2 size = MeasureTextEx(font, text, textSize, textSize * SPACING);
 
-    size.x = ((float) SCREEN_WIDTH) / 2 - size.x;
+    size.x = ((float) SCREEN_WIDTH) / 2 - size.x - textSize * SPACING;
     size.y = ((float) SCREEN_HEIGHT - size.y) / 2;
 
     return size;
 }
 
-Vector2 centerTextPos(char* text, float textSize) {
-    Vector2 size = MeasureTextEx(GetFontDefault(), text, textSize, textSize / 10);
+Vector2 centerTextPos(char* text, float textSize , Font font) {
+    Vector2 size = MeasureTextEx(font, text, textSize, textSize * SPACING);
 
     size.x = ((float) SCREEN_WIDTH - size.x) / 2;
     size.y = ((float) SCREEN_HEIGHT - size.y) / 2;
@@ -126,13 +133,13 @@ char* textHandler(char* text) {
         return changedText;
     }
 
-    if (GetCharPressed() != 0) {
+    int key;
+
+    while ((key = GetCharPressed()) != 0) { // wait for char to read the continue!!
         char* changedText = malloc(sizeof(char) * (textLen + 2));
         memcpy(changedText, text, textLen);
 
-        changedText[textLen] = GetKeyPressed() + 32;
-        if(IsKeyDown(KEY_CAPS_LOCK)) changedText[textLen] -= 32;
-        changedText[textLen + 1] = '\0';
+        changedText[textLen] = key;
 
         return changedText;
     }
@@ -140,9 +147,9 @@ char* textHandler(char* text) {
     return text;
 }
 
-void showCursor(char* cursor, Vector2 cursorPos, float textSize) {
+void showCursor(char* cursor, Vector2 cursorPos, float textSize, Font font) {
     if (count < CURSOR_RATE && show) {
-        DrawTextEx(GetFontDefault(), cursor, cursorPos, textSize, textSize / 10, GREEN);
+        DrawTextEx(font, cursor, cursorPos, textSize, textSize * SPACING, CURSOR_COLOR);
         count++;
         return;
     }
