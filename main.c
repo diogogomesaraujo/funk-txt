@@ -30,11 +30,15 @@ char* textHandler(char* text);
 void showCursor(char* cursor, Vector2 cursorPos, float textSize, Font font);
 char* readTextFromFile(FILE* f);
 
-int main() {
+int main(int argc, char** argv) {
     // SETUP
-    const char* title = "funk-txt";
+    const char* fileName = FILE_NAME;
 
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, title);
+    if (argc > 1) {
+        fileName = argv[1];
+    }
+
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, fileName);
     SetTargetFPS(60);
 
     // TEXT
@@ -49,13 +53,13 @@ int main() {
     Vector2 cursorPos = centerTextPos(cursor, textSize, font);
 
     // FILE
-    FILE* f = fopen(FILE_NAME, "r+");
+    FILE* f = fopen(fileName, "r+");
 
     if (f == NULL) {
-        FILE* aux = fopen(FILE_NAME, "w");
+        FILE* aux = fopen(fileName, "w");
         fclose(aux);
 
-        f = fopen(FILE_NAME, "r+");
+        f = fopen(fileName, "r+");
     }
 
     text = readTextFromFile(f);
@@ -69,7 +73,7 @@ int main() {
             char* fileText;
             if(IsKeyDown(KEY_S) && strcmp(fileText = readTextFromFile(f), text) != 0) {
                 free(fileText);
-                FILE* aux = fopen(FILE_NAME, "w");
+                FILE* aux = fopen(fileName, "w");
                 if (aux != NULL){
                     fprintf(aux, "%s", text);
                     fclose(aux);
