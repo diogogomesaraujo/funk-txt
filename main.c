@@ -131,8 +131,10 @@ int main(int argc, char** argv) {
 Vector2 centerTextLastCharPos(char* text, float textSize, Font font, int lines) {
     Vector2 size = MeasureTextEx(font, text, textSize, textSize * SPACING);
 
+    float line = size.y / lines;
+
     size.x = ((float) SCREEN_WIDTH) / 2 - size.x - textSize * SPACING;
-    size.y = ((float) SCREEN_HEIGHT - size.y) / 2;
+    size.y = ((float) SCREEN_HEIGHT - line) / 2 - line * (lines - 1);
 
     return size;
 }
@@ -167,6 +169,16 @@ char* textHandler(char* text) {
         memcpy(changedText, text, textLen);
 
         changedText[textLen] = ' ';
+        changedText[textLen + 1] = '\0';
+
+        return changedText;
+    }
+
+    if(IsKeyPressed(KEY_ENTER)) {
+        char* changedText = malloc(sizeof(char) * (textLen + 2));
+        memcpy(changedText, text, textLen);
+
+        changedText[textLen] = '\n';
         changedText[textLen + 1] = '\0';
 
         return changedText;
