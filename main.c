@@ -23,7 +23,7 @@
 int count = 0;
 bool show = true;
 
-Vector2 centerTextLastCharPos(char* text, float textSize, Font font, int lines);
+Vector2 centerTextLastCharPos(char* text, float textSize, Font font, int lines, int lastLineCount);
 Vector2 centerTextPos(char* text, float textSize, Font font);
 float textSizeFromLen(int textLen);
 char* textHandler(char* text);
@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
     text[0] = '\0';
     float textSize = textSizeFromLen(strlen(text));
     Font font = LoadFontEx("VictorMono-Regular.ttf", 2 * textSize, 0, 250);
-    Vector2 textPos = centerTextLastCharPos(text, textSize, font, 1);
+    Vector2 textPos = centerTextLastCharPos(text, textSize, font, 1, 0);
 
     // CURSOR
     char* cursor = "|";
@@ -95,14 +95,24 @@ int main(int argc, char** argv) {
 
         int lines = 1;
         char *linePointer = text;
+        char *lastLinePointer = NULL;
 
         while ((linePointer = strchr(linePointer, '\n')) != NULL) {
+            lastLinePointer = linePointer;
+
             lines++;
             linePointer++;
         }
 
+        int lastLineCount = 0;
+
+        while(lastLinePointer != NULL && *lastLinePointer != '\0') {
+            lastLinePointer++;
+            lastLineCount++;
+        }
+
         textSize = textSizeFromLen(strlen(text));
-        textPos = centerTextLastCharPos(text, textSize, font, lines);
+        textPos = centerTextLastCharPos(text, textSize, font, lines, lastLineCount);
 
         cursorPos = centerTextPos(cursor, textSize, font);
 
@@ -128,13 +138,18 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-Vector2 centerTextLastCharPos(char* text, float textSize, Font font, int lines) {
+Vector2 centerTextLastCharPos(char* text, float textSize, Font font, int lines, int lastLineCount) {
     Vector2 size = MeasureTextEx(font, text, textSize, textSize * SPACING);
+    Vector2 charSize = MeasureTextEx(font, &text[strlen(text) - 1], textSize, 0);
 
-    float line = size.y / lines;
+    float lineWidth = 0;
+    float lineHeight = size.y / lines;
 
-    size.x = ((float) SCREEN_WIDTH) / 2 - size.x - textSize * SPACING;
-    size.y = ((float) SCREEN_HEIGHT - line) / 2 - line * (lines - 1);
+    if (charSize.y == size.y) lineWidth = size.x;
+    if(lastLineCount != 0) lineWidth = (lastLineCount - 1) * charSize.x + (lastLineCount - 2) * textSize * SPACING;
+
+    size.x = ((float) SCREEN_WIDTH) / 2 - lineWidth - textSize * SPACING;
+    size.y = ((float) SCREEN_HEIGHT - lineHeight) / 2 - lineHeight * (lines - 1);
 
     return size;
 }
@@ -170,6 +185,19 @@ char* textHandler(char* text) {
 
         changedText[textLen] = ' ';
         changedText[textLen + 1] = '\0';
+
+        return changedText;
+    }
+
+    if(IsKeyPressed(KEY_TAB)) {
+        char* changedText = malloc(sizeof(char) * (textLen + 5));
+        memcpy(changedText, text, textLen);
+
+        for(int i = textLen; i < textLen + 4; i++) {
+            changedText[i] = ' ';
+        }
+        changedText[textLen] = ' ';
+        changedText[textLen + 5] = '\0';
 
         return changedText;
     }
