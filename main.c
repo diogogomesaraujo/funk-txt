@@ -13,7 +13,7 @@
 
 #define CURSOR_RATE 30
 
-#define BACKGROUND_COLOR (Color) {0x1e,0x1e,0x1e,0xff}
+#define BACKGROUND_COLOR (Color) {0x28,0x28,0x28,0xff}
 #define TEXT_COLOR (Color) RAYWHITE
 #define CURSOR_COLOR (Color) {0x6d,0x9d,0x97,0xff}
 
