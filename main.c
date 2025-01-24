@@ -235,12 +235,9 @@ char* textHandler(char* text) {
     int key;
 
     while ((key = GetCharPressed()) != 0) { // wait for char to read the continue!!
-
-        printf("%f\n", atChar.x);
-
         if(atChar.x == 0) {
             char* changedText = malloc(sizeof(char) * (textLen + 2));
-            memcpy(changedText, text, textLen);
+            strncpy(changedText, text, textLen);
 
             changedText[textLen] = key;
 
@@ -248,12 +245,12 @@ char* textHandler(char* text) {
 
             return changedText;
         } else {
-            char* changedText = malloc(sizeof(char) * (textLen + 1));
-            memcpy(changedText, text, textLen);
+            char* changedText = malloc(sizeof(char) * (textLen + 2));
+            strncpy(changedText, text, textLen - atChar.x);
 
             changedText[textLen - (int) atChar.x] = key;
 
-            atChar.x--;
+            strncpy(&changedText[textLen - (int) atChar.x + 1], &text[textLen - (int) atChar.x], atChar.x + 1);
 
             return changedText;
         }
