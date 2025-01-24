@@ -267,6 +267,7 @@ char* textHandler(char* text) {
             strncpy(changedText, text, textLen);
 
             changedText[textLen] = key;
+            changedText[textLen + 1] = '\0';
 
             atChar.x = 0;
 
@@ -278,6 +279,7 @@ char* textHandler(char* text) {
             changedText[textLen - (int) atChar.x] = key;
 
             strncpy(&changedText[textLen - (int) atChar.x + 1], &text[textLen - (int) atChar.x], atChar.x + 1);
+            changedText[strlen(changedText)] = '\0';
 
             return changedText;
         }
