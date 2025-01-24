@@ -178,45 +178,72 @@ float textSizeFromLen(int textLen) {
 
 char* textHandler(char* text) {
     int textLen = strlen(text);
-    if(IsKeyPressed(KEY_BACKSPACE) && textLen > 0) {
-        atChar.x = 0;
-        atChar.y = 0;
+    if(IsKeyPressed(KEY_BACKSPACE) && textLen - atChar.x > 0) {
+        if(atChar.x == 0) {
+            atChar.x = 0;
 
-        char* changedText = malloc(sizeof(char) * (textLen));
-        memcpy(changedText, text, textLen - 1);
+            char* changedText = malloc(sizeof(char) * (textLen));
+            memcpy(changedText, text, textLen - 1);
 
-        changedText[textLen - 1] = '\0';
+            changedText[textLen - 1] = '\0';
 
-        return changedText;
+            return changedText;
+        } else {
+            char* changedText = malloc(sizeof(char) * (textLen));
+            strncpy(changedText, text, textLen - atChar.x - 1);
+
+            strncpy(&changedText[textLen - (int) atChar.x - 1], &text[textLen - (int) atChar.x], atChar.x + 1);
+
+            return changedText;
+        }
     }
 
     if(IsKeyPressed(KEY_SPACE)) {
-        atChar.x = 0;
-        atChar.y = 0;
+        if(atChar.x == 0) {
+            char* changedText = malloc(sizeof(char) * (textLen + 2));
+            strncpy(changedText, text, textLen);
 
-        char* changedText = malloc(sizeof(char) * (textLen + 2));
-        memcpy(changedText, text, textLen);
+            changedText[textLen] = ' ';
 
-        changedText[textLen] = ' ';
-        changedText[textLen + 1] = '\0';
+            atChar.x = 0;
 
-        return changedText;
+            return changedText;
+        } else {
+            char* changedText = malloc(sizeof(char) * (textLen + 2));
+            strncpy(changedText, text, textLen - atChar.x);
+
+            changedText[textLen - (int) atChar.x] = ' ';
+
+            strncpy(&changedText[textLen - (int) atChar.x + 1], &text[textLen - (int) atChar.x], atChar.x + 1);
+
+            return changedText;
+        }
     }
 
     if(IsKeyPressed(KEY_TAB)) {
-        atChar.x = 0;
-        atChar.y = 0;
+        if(atChar.x == 0) {
+            char* changedText = malloc(sizeof(char) * (textLen + 5));
+            strncpy(changedText, text, textLen);
 
-        char* changedText = malloc(sizeof(char) * (textLen + 5));
-        memcpy(changedText, text, textLen);
+            for(int i = textLen; i < textLen + 4; i++) {
+                changedText[i] = ' ';
+            }
 
-        for(int i = textLen; i < textLen + 4; i++) {
-            changedText[i] = ' ';
+            atChar.x = 0;
+
+            return changedText;
+        } else {
+            char* changedText = malloc(sizeof(char) * (textLen + 5));
+            strncpy(changedText, text, textLen - atChar.x);
+
+            for(int i = textLen - atChar.x; i < textLen + 4; i++) {
+                changedText[i] = ' ';
+            }
+
+            strncpy(&changedText[textLen - (int) atChar.x + 4], &text[textLen - (int) atChar.x], atChar.x + 1);
+
+            return changedText;
         }
-        changedText[textLen] = ' ';
-        changedText[textLen + 5] = '\0';
-
-        return changedText;
     }
 
     if(IsKeyPressed(KEY_ENTER)) {
