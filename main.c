@@ -112,12 +112,14 @@ int main(int argc, char** argv) {
             lastLineCount++;
         }
 
-        if(lastLineCount == 0) lastLineCount = strlen(text) + 1;
+        int textLen = strlen(text);
+
+        if(lastLineCount == 0) lastLineCount = textLen + 1;
 
         if(IsKeyPressed(KEY_LEFT) && lastLineCount - atChar.x - 1 > 0) atChar.x++;
         if(IsKeyPressed(KEY_RIGHT) && atChar.x > 0) atChar.x--;
 
-        textSize = textSizeFromLen(strlen(text));
+        textSize = textSizeFromLen(textLen);
         textPos = centerTextLastCharPos(text, textSize, font, lines, lastLineCount);
 
         cursorPos = centerTextPos(cursor, textSize, font);
@@ -233,15 +235,28 @@ char* textHandler(char* text) {
     int key;
 
     while ((key = GetCharPressed()) != 0) { // wait for char to read the continue!!
-        atChar.x = 0;
-        atChar.y = 0;
 
-        char* changedText = malloc(sizeof(char) * (textLen + 2));
-        memcpy(changedText, text, textLen);
+        printf("%f\n", atChar.x);
 
-        changedText[textLen] = key;
+        if(atChar.x == 0) {
+            char* changedText = malloc(sizeof(char) * (textLen + 2));
+            memcpy(changedText, text, textLen);
 
-        return changedText;
+            changedText[textLen] = key;
+
+            atChar.x = 0;
+
+            return changedText;
+        } else {
+            char* changedText = malloc(sizeof(char) * (textLen + 1));
+            memcpy(changedText, text, textLen);
+
+            changedText[textLen - (int) atChar.x] = key;
+
+            atChar.x--;
+
+            return changedText;
+        }
     }
 
     return text;
