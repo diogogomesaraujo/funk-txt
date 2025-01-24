@@ -22,6 +22,7 @@
 
 int count = 0;
 bool show = true;
+Vector2 atChar = {0,0}; //FROM LAST CHAR
 
 Vector2 centerTextLastCharPos(char* text, float textSize, Font font, int lines, int lastLineCount);
 Vector2 centerTextPos(char* text, float textSize, Font font);
@@ -111,6 +112,11 @@ int main(int argc, char** argv) {
             lastLineCount++;
         }
 
+        if(lastLineCount == 0) lastLineCount = strlen(text) + 1;
+
+        if(IsKeyPressed(KEY_LEFT) && lastLineCount - atChar.x - 1 > 0) atChar.x++;
+        if(IsKeyPressed(KEY_RIGHT) && atChar.x > 0) atChar.x--;
+
         textSize = textSizeFromLen(strlen(text));
         textPos = centerTextLastCharPos(text, textSize, font, lines, lastLineCount);
 
@@ -146,10 +152,10 @@ Vector2 centerTextLastCharPos(char* text, float textSize, Font font, int lines, 
     float lineHeight = size.y / lines;
 
     if (charSize.y == size.y) lineWidth = size.x;
-    if(lastLineCount != 0) lineWidth = (lastLineCount - 1) * charSize.x + (lastLineCount - 2) * textSize * SPACING;
+    if(lastLineCount != 0) lineWidth = (lastLineCount - 1 - atChar.x) * charSize.x + (lastLineCount - 2 - atChar.x) * textSize * SPACING;
 
     size.x = ((float) SCREEN_WIDTH) / 2 - lineWidth - textSize * SPACING;
-    size.y = ((float) SCREEN_HEIGHT - lineHeight) / 2 - lineHeight * (lines - 1);
+    size.y = ((float) SCREEN_HEIGHT - lineHeight) / 2 - lineHeight * (lines - 1 - atChar.y);
 
     return size;
 }
@@ -171,6 +177,9 @@ float textSizeFromLen(int textLen) {
 char* textHandler(char* text) {
     int textLen = strlen(text);
     if(IsKeyPressed(KEY_BACKSPACE) && textLen > 0) {
+        atChar.x = 0;
+        atChar.y = 0;
+
         char* changedText = malloc(sizeof(char) * (textLen));
         memcpy(changedText, text, textLen - 1);
 
@@ -180,6 +189,9 @@ char* textHandler(char* text) {
     }
 
     if(IsKeyPressed(KEY_SPACE)) {
+        atChar.x = 0;
+        atChar.y = 0;
+
         char* changedText = malloc(sizeof(char) * (textLen + 2));
         memcpy(changedText, text, textLen);
 
@@ -190,6 +202,9 @@ char* textHandler(char* text) {
     }
 
     if(IsKeyPressed(KEY_TAB)) {
+        atChar.x = 0;
+        atChar.y = 0;
+
         char* changedText = malloc(sizeof(char) * (textLen + 5));
         memcpy(changedText, text, textLen);
 
@@ -203,6 +218,9 @@ char* textHandler(char* text) {
     }
 
     if(IsKeyPressed(KEY_ENTER)) {
+        atChar.x = 0;
+        atChar.y = 0;
+
         char* changedText = malloc(sizeof(char) * (textLen + 2));
         memcpy(changedText, text, textLen);
 
@@ -215,6 +233,9 @@ char* textHandler(char* text) {
     int key;
 
     while ((key = GetCharPressed()) != 0) { // wait for char to read the continue!!
+        atChar.x = 0;
+        atChar.y = 0;
+
         char* changedText = malloc(sizeof(char) * (textLen + 2));
         memcpy(changedText, text, textLen);
 

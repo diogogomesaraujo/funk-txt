@@ -11,7 +11,7 @@ LDFLAGS = $(shell pkg-config --libs raylib) -framework CoreVideo -framework IOKi
 SRCS = main.c
 
 # Output executable
-TARGET = main
+TARGET = funk
 
 # Build target
 $(TARGET): $(SRCS)
@@ -20,7 +20,7 @@ $(TARGET): $(SRCS)
 # Run
 run:
 	$(CC) $(CFLAGS) $(SRCS) -o $(TARGET) $(LDFLAGS)
-	./main
+	./funk
 	rm -f $(TARGET)
 
 # Clean target
