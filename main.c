@@ -247,16 +247,25 @@ char* textHandler(char* text) {
     }
 
     if(IsKeyPressed(KEY_ENTER)) {
-        atChar.x = 0;
-        atChar.y = 0;
+        if(atChar.x == 0) {
+            char* changedText = malloc(sizeof(char) * (textLen + 2));
+            strncpy(changedText, text, textLen);
 
-        char* changedText = malloc(sizeof(char) * (textLen + 2));
-        memcpy(changedText, text, textLen);
+            changedText[textLen] = '\n';
 
-        changedText[textLen] = '\n';
-        changedText[textLen + 1] = '\0';
+            atChar.x = 0;
 
-        return changedText;
+            return changedText;
+        } else {
+            char* changedText = malloc(sizeof(char) * (textLen + 2));
+            strncpy(changedText, text, textLen - atChar.x);
+
+            changedText[textLen - (int) atChar.x] = '\n';
+
+            strncpy(&changedText[textLen - (int) atChar.x + 1], &text[textLen - (int) atChar.x], atChar.x + 1);
+
+            return changedText;
+        }
     }
 
     int key;
