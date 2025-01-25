@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <pthread.h>
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
@@ -20,16 +21,21 @@
 #define BUF_SIZE 100
 #define FILE_NAME "txt"
 
+char* text;
 int count = 0;
 bool show = true;
 Vector2 atChar = {0,0}; //FROM LAST CHAR
+int lines;
+int lastLineCount;
 
 Vector2 centerTextLastCharPos(char* text, float textSize, Font font, int lines, int lastLineCount);
 Vector2 centerTextPos(char* text, float textSize, Font font);
 float textSizeFromLen(int textLen);
 char* textHandler(char* text);
 void showCursor(char* cursor, Vector2 cursorPos, float textSize, Font font);
-char* readTextFromFile(FILE* f);
+void* readTextFromFile(void* f);
+void* controlOperations(void* fileName);
+void* handleLinesAndCount();
 
 int main(int argc, char** argv) {
     // SETUP
@@ -42,17 +48,6 @@ int main(int argc, char** argv) {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, fileName);
     SetTargetFPS(60);
 
-    // TEXT
-    char* text = malloc(sizeof(char) * 1);
-    text[0] = '\0';
-    float textSize = textSizeFromLen(strlen(text));
-    Font font = LoadFontEx("VictorMono-Regular.ttf", 2 * textSize, 0, 250);
-    Vector2 textPos = centerTextLastCharPos(text, textSize, font, 1, 0);
-
-    // CURSOR
-    char* cursor = "|";
-    Vector2 cursorPos = centerTextPos(cursor, textSize, font);
-
     // FILE
     FILE* f = fopen(fileName, "r+");
 
@@ -63,30 +58,34 @@ int main(int argc, char** argv) {
         f = fopen(fileName, "r+");
     }
 
-    text = readTextFromFile(f);
+    pthread_t readFile;
+
+    pthread_create(&readFile, NULL, readTextFromFile, f);
+    pthread_join(readFile, NULL);
+
+    // TEXT
+    float textSize = textSizeFromLen(strlen(text));
+    Font font = LoadFontEx("VictorMono-Regular.ttf", 2 * textSize, 0, 250);
+    Vector2 textPos = centerTextLastCharPos(text, textSize, font, 1, 0);
+
+    // CURSOR
+    char* cursor = "|";
+    Vector2 cursorPos = centerTextPos(cursor, textSize, font);
+
+    //FLAGS
+    bool canSave = true;
 
     // RENDER
     while(!WindowShouldClose()) {
         if(IsKeyPressed(KEY_ESCAPE)) return 0;
 
-        // TODO: File System is Terrible
-        if(IsKeyDown(KEY_LEFT_CONTROL)) {
-            char* fileText;
-            if(IsKeyDown(KEY_S) && strcmp(fileText = readTextFromFile(f), text) != 0) {
-                free(fileText);
-                FILE* aux = fopen(fileName, "w");
-                if (aux != NULL){
-                    fprintf(aux, "%s", text);
-                    fclose(aux);
-                }
-            }
-            else if(IsKeyDown(KEY_X)) {
-                text = realloc(text, sizeof(char));
-                text[0] = '\0';
-            }
+        if(IsKeyDown(KEY_LEFT_CONTROL) && canSave) {
+            pthread_t saveFile;
+            pthread_create(&saveFile, NULL, controlOperations, (char*)fileName);
+            pthread_join(saveFile, NULL);
         }
 
-        char*changedText = textHandler(text);
+        char* changedText = textHandler(text);
         if(changedText != text) {
             free(text);
             text = changedText;
@@ -94,23 +93,10 @@ int main(int argc, char** argv) {
             count = 0;
         }
 
-        int lines = 1;
-        char *linePointer = text;
-        char *lastLinePointer = NULL;
+        pthread_t handleText;
 
-        while ((linePointer = strchr(linePointer, '\n')) != NULL) {
-            lastLinePointer = linePointer;
-
-            lines++;
-            linePointer++;
-        }
-
-        int lastLineCount = 0;
-
-        while(lastLinePointer != NULL && *lastLinePointer != '\0') {
-            lastLinePointer++;
-            lastLineCount++;
-        }
+        pthread_create(&handleText, NULL, handleLinesAndCount, NULL);
+        pthread_join(handleText, NULL);
 
         int textLen = strlen(text);
 
@@ -319,7 +305,8 @@ void showCursor(char* cursor, Vector2 cursorPos, float textSize, Font font) {
     }
 }
 
-char* readTextFromFile(FILE* f) {
+void* readTextFromFile(void* f) {
+    f = (FILE*) f;
     rewind(f); // so it starts from the beggining!!
 
     char* fileText = NULL;
@@ -334,5 +321,46 @@ char* readTextFromFile(FILE* f) {
     fileText = realloc(fileText, sizeof(char) * (size + 1));
     fileText[size] = '\0';
 
-    return fileText;
+    text = fileText;
+
+    pthread_exit(NULL);
+}
+
+void* controlOperations(void* fileName) {
+    fileName = (char*) fileName;
+    if(IsKeyDown(KEY_S)) {
+        FILE* aux = fopen(fileName, "w");
+        if (aux != NULL){
+            fprintf(aux, "%s", text);
+            fclose(aux);
+        }
+    }
+    else if(IsKeyDown(KEY_X)) {
+        text = realloc(text, sizeof(char));
+        text[0] = '\0';
+    }
+
+    pthread_exit(NULL);
+}
+
+void* handleLinesAndCount() {
+    lines = 1;
+    char *linePointer = text;
+    char *lastLinePointer = NULL;
+
+    while ((linePointer = strchr(linePointer, '\n')) != NULL) {
+        lastLinePointer = linePointer;
+
+        lines++;
+        linePointer++;
+    }
+
+    lastLineCount = 0;
+
+    while(lastLinePointer != NULL && *lastLinePointer != '\0') {
+        lastLinePointer++;
+        lastLineCount++;
+    }
+
+    pthread_exit(NULL);
 }
