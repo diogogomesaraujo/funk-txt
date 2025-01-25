@@ -65,21 +65,19 @@ int main(int argc, char** argv) {
 
     // TEXT
     float textSize = textSizeFromLen(strlen(text));
-    Font font = LoadFontEx("VictorMono-Regular.ttf", 2 * textSize, 0, 250);
+
+    Font font = LoadFontEx("VictorMono-Regular.ttf", TEXT_SIZE, 0, 250);
     Vector2 textPos = centerTextLastCharPos(text, textSize, font, 1, 0);
 
     // CURSOR
     char* cursor = "|";
     Vector2 cursorPos = centerTextPos(cursor, textSize, font);
 
-    //FLAGS
-    bool canSave = true;
-
     // RENDER
     while(!WindowShouldClose()) {
         if(IsKeyPressed(KEY_ESCAPE)) return 0;
 
-        if(IsKeyDown(KEY_LEFT_CONTROL) && canSave) {
+        if(IsKeyDown(KEY_LEFT_CONTROL)) {
             pthread_t saveFile;
             pthread_create(&saveFile, NULL, controlOperations, (char*)fileName);
             pthread_join(saveFile, NULL);
@@ -328,7 +326,7 @@ void* readTextFromFile(void* f) {
 
 void* controlOperations(void* fileName) {
     fileName = (char*) fileName;
-    if(IsKeyDown(KEY_S)) {
+    if(IsKeyPressed(KEY_S)) {
         FILE* aux = fopen(fileName, "w");
         if (aux != NULL){
             fprintf(aux, "%s", text);
