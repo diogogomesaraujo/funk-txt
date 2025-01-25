@@ -24,9 +24,11 @@
 char* text;
 int count = 0;
 bool show = true;
-Vector2 atChar = {0,0}; //FROM LAST CHAR
+float atChar = 0; //FROM LAST CHAR
 int lines;
 int lastLineCount;
+int screenWidth = SCREEN_WIDTH;
+int screenHeight = SCREEN_HEIGHT;
 
 Vector2 centerTextLastCharPos(char* text, float textSize, Font font, int lines, int lastLineCount);
 Vector2 centerTextPos(char* text, float textSize, Font font);
@@ -45,6 +47,7 @@ int main(int argc, char** argv) {
         fileName = argv[1];
     }
 
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, fileName);
     SetTargetFPS(60);
 
@@ -77,6 +80,9 @@ int main(int argc, char** argv) {
     while(!WindowShouldClose()) {
         if(IsKeyPressed(KEY_ESCAPE)) return 0;
 
+        screenWidth = GetScreenWidth();
+        screenHeight = GetScreenHeight();
+
         if(IsKeyDown(KEY_LEFT_CONTROL)) {
             pthread_t saveFile;
             pthread_create(&saveFile, NULL, controlOperations, (char*)fileName);
@@ -100,8 +106,8 @@ int main(int argc, char** argv) {
 
         if(lastLineCount == 0) lastLineCount = textLen + 1;
 
-        if(IsKeyPressed(KEY_LEFT) && lastLineCount - atChar.x - 1 > 0) atChar.x++;
-        if(IsKeyPressed(KEY_RIGHT) && atChar.x > 0) atChar.x--;
+        if(IsKeyPressed(KEY_LEFT) && lastLineCount - atChar - 1 > 0) atChar++;
+        if(IsKeyPressed(KEY_RIGHT) && atChar > 0) atChar--;
 
         textSize = textSizeFromLen(textLen);
         textPos = centerTextLastCharPos(text, textSize, font, lines, lastLineCount);
@@ -138,10 +144,10 @@ Vector2 centerTextLastCharPos(char* text, float textSize, Font font, int lines, 
     float lineHeight = size.y / lines;
 
     if (charSize.y == size.y) lineWidth = size.x;
-    if(lastLineCount != 0) lineWidth = (lastLineCount - 1 - atChar.x) * charSize.x + (lastLineCount - 2 - atChar.x) * textSize * SPACING;
+    if(lastLineCount != 0) lineWidth = (lastLineCount - 1 - atChar) * charSize.x + (lastLineCount - 2 - atChar) * textSize * SPACING;
 
-    size.x = ((float) SCREEN_WIDTH) / 2 - lineWidth - textSize * SPACING;
-    size.y = ((float) SCREEN_HEIGHT - lineHeight) / 2 - lineHeight * (lines - 1 - atChar.y);
+    size.x = ((float) screenWidth) / 2 - lineWidth - textSize * SPACING;
+    size.y = ((float) screenHeight - lineHeight) / 2 - lineHeight * (lines - 1);
 
     return size;
 }
@@ -149,8 +155,8 @@ Vector2 centerTextLastCharPos(char* text, float textSize, Font font, int lines, 
 Vector2 centerTextPos(char* text, float textSize , Font font) {
     Vector2 size = MeasureTextEx(font, text, textSize, textSize * SPACING);
 
-    size.x = ((float) SCREEN_WIDTH - size.x) / 2;
-    size.y = ((float) SCREEN_HEIGHT - size.y) / 2;
+    size.x = ((float) screenWidth - size.x) / 2;
+    size.y = ((float) screenHeight - size.y) / 2;
 
     return size;
 }
@@ -162,9 +168,9 @@ float textSizeFromLen(int textLen) {
 
 char* textHandler(char* text) {
     int textLen = strlen(text);
-    if(IsKeyPressed(KEY_BACKSPACE) && textLen - atChar.x > 0) {
-        if(atChar.x == 0) {
-            atChar.x = 0;
+    if(IsKeyPressed(KEY_BACKSPACE) && textLen - atChar > 0) {
+        if(atChar == 0) {
+            atChar = 0;
 
             char* changedText = malloc(sizeof(char) * (textLen));
             memcpy(changedText, text, textLen - 1);
@@ -174,38 +180,38 @@ char* textHandler(char* text) {
             return changedText;
         } else {
             char* changedText = malloc(sizeof(char) * (textLen));
-            strncpy(changedText, text, textLen - atChar.x - 1);
+            strncpy(changedText, text, textLen - atChar - 1);
 
-            strncpy(&changedText[textLen - (int) atChar.x - 1], &text[textLen - (int) atChar.x], atChar.x + 1);
+            strncpy(&changedText[textLen - (int) atChar - 1], &text[textLen - (int) atChar], atChar + 1);
 
             return changedText;
         }
     }
 
     if(IsKeyPressed(KEY_SPACE)) {
-        if(atChar.x == 0) {
+        if(atChar == 0) {
             char* changedText = malloc(sizeof(char) * (textLen + 2));
             strncpy(changedText, text, textLen);
 
             changedText[textLen] = ' ';
 
-            atChar.x = 0;
+            atChar = 0;
 
             return changedText;
         } else {
             char* changedText = malloc(sizeof(char) * (textLen + 2));
-            strncpy(changedText, text, textLen - atChar.x);
+            strncpy(changedText, text, textLen - atChar);
 
-            changedText[textLen - (int) atChar.x] = ' ';
+            changedText[textLen - (int) atChar] = ' ';
 
-            strncpy(&changedText[textLen - (int) atChar.x + 1], &text[textLen - (int) atChar.x], atChar.x + 1);
+            strncpy(&changedText[textLen - (int) atChar + 1], &text[textLen - (int) atChar], atChar + 1);
 
             return changedText;
         }
     }
 
     if(IsKeyPressed(KEY_TAB)) {
-        if(atChar.x == 0) {
+        if(atChar == 0) {
             char* changedText = malloc(sizeof(char) * (textLen + 5));
             strncpy(changedText, text, textLen);
 
@@ -213,40 +219,40 @@ char* textHandler(char* text) {
                 changedText[i] = ' ';
             }
 
-            atChar.x = 0;
+            atChar = 0;
 
             return changedText;
         } else {
             char* changedText = malloc(sizeof(char) * (textLen + 5));
-            strncpy(changedText, text, textLen - atChar.x);
+            strncpy(changedText, text, textLen - atChar);
 
-            for(int i = textLen - atChar.x; i < textLen + 4; i++) {
+            for(int i = textLen - atChar; i < textLen + 4; i++) {
                 changedText[i] = ' ';
             }
 
-            strncpy(&changedText[textLen - (int) atChar.x + 4], &text[textLen - (int) atChar.x], atChar.x + 1);
+            strncpy(&changedText[textLen - (int) atChar + 4], &text[textLen - (int) atChar], atChar + 1);
 
             return changedText;
         }
     }
 
     if(IsKeyPressed(KEY_ENTER)) {
-        if(atChar.x == 0) {
+        if(atChar == 0) {
             char* changedText = malloc(sizeof(char) * (textLen + 2));
             strncpy(changedText, text, textLen);
 
             changedText[textLen] = '\n';
 
-            atChar.x = 0;
+            atChar = 0;
 
             return changedText;
         } else {
             char* changedText = malloc(sizeof(char) * (textLen + 2));
-            strncpy(changedText, text, textLen - atChar.x);
+            strncpy(changedText, text, textLen - atChar);
 
-            changedText[textLen - (int) atChar.x] = '\n';
+            changedText[textLen - (int) atChar] = '\n';
 
-            strncpy(&changedText[textLen - (int) atChar.x + 1], &text[textLen - (int) atChar.x], atChar.x + 1);
+            strncpy(&changedText[textLen - (int) atChar + 1], &text[textLen - (int) atChar], atChar + 1);
 
             return changedText;
         }
@@ -255,23 +261,23 @@ char* textHandler(char* text) {
     int key;
 
     while ((key = GetCharPressed()) != 0) { // wait for char to read the continue!!
-        if(atChar.x == 0) {
+        if(atChar == 0) {
             char* changedText = malloc(sizeof(char) * (textLen + 2));
             strncpy(changedText, text, textLen);
 
             changedText[textLen] = key;
             changedText[textLen + 1] = '\0';
 
-            atChar.x = 0;
+            atChar = 0;
 
             return changedText;
         } else {
             char* changedText = malloc(sizeof(char) * (textLen + 2));
-            strncpy(changedText, text, textLen - atChar.x);
+            strncpy(changedText, text, textLen - atChar);
 
-            changedText[textLen - (int) atChar.x] = key;
+            changedText[textLen - (int) atChar] = key;
 
-            strncpy(&changedText[textLen - (int) atChar.x + 1], &text[textLen - (int) atChar.x], atChar.x + 1);
+            strncpy(&changedText[textLen - (int) atChar + 1], &text[textLen - (int) atChar], atChar + 1);
             changedText[strlen(changedText)] = '\0';
 
             return changedText;
