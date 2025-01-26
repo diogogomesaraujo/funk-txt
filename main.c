@@ -84,8 +84,10 @@ int main(int argc, char** argv) {
     while(!WindowShouldClose()) {
         if(IsKeyPressed(KEY_ESCAPE)) return 0;
 
-        screenWidth = GetScreenWidth();
-        screenHeight = GetScreenHeight();
+        if (screenWidth != GetScreenWidth() || screenHeight != GetScreenHeight()) {
+            screenWidth = GetScreenWidth();
+            screenHeight = GetScreenHeight();
+        }
 
         if(IsKeyDown(KEY_LEFT_CONTROL)) {
             pthread_t saveFile;
