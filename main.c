@@ -15,7 +15,7 @@
 #define CURSOR_RATE 30
 
 #define BACKGROUND_COLOR (Color) {0x28,0x28,0x28,0xff}
-#define TEXT_COLOR (Color) RAYWHITE
+#define TEXT_COLOR (Color) {0xef,0xf1,0xf5,0xff}
 #define CURSOR_COLOR (Color) {0x6d,0x9d,0x97,0xff}
 
 #define BUF_SIZE 100
