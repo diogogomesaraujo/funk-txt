@@ -21,6 +21,8 @@
 #define BUF_SIZE 100
 #define FILE_NAME "txt"
 
+#define SMOOTHING 0.95f
+
 char* text;
 int count = 0;
 bool show = true;
@@ -31,13 +33,15 @@ int screenWidth = SCREEN_WIDTH;
 int screenHeight = SCREEN_HEIGHT;
 
 Vector2 centerTextLastCharPos(char* text, float textSize, Font font, int lines, int lastLineCount);
-Vector2 centerTextPos(char* text, float textSize, Font font);
+Vector2 centerCursorPos(char* cursor, float textSize, Font font, float offsetX, float offsetY);
 float textSizeFromLen(int textLen);
 char* textHandler(char* text);
 void showCursor(char* cursor, Vector2 cursorPos, float textSize, Font font);
 void* readTextFromFile(void* f);
 void* controlOperations(void* fileName);
 void* handleLinesAndCount();
+float lerp(float a, float b, float f);
+float smoothing(float a, float b, float s);
 
 int main(int argc, char** argv) {
     // SETUP
@@ -74,7 +78,7 @@ int main(int argc, char** argv) {
 
     // CURSOR
     char* cursor = "|";
-    Vector2 cursorPos = centerTextPos(cursor, textSize, font);
+    Vector2 cursorPos = centerCursorPos(cursor, textSize, font, 0, 0);
 
     // RENDER
     while(!WindowShouldClose()) {
@@ -109,10 +113,20 @@ int main(int argc, char** argv) {
         if(IsKeyPressed(KEY_LEFT) && lastLineCount - atChar - 1 > 0) atChar++;
         if(IsKeyPressed(KEY_RIGHT) && atChar > 0) atChar--;
 
-        textSize = textSizeFromLen(textLen);
-        textPos = centerTextLastCharPos(text, textSize, font, lines, lastLineCount);
+        textSize = smoothing(textSizeFromLen(textLen), textSize, SMOOTHING);
+        Vector2 auxText = centerTextLastCharPos(text, textSize, font, lines, lastLineCount);
+        Vector2 auxCursor1 = centerCursorPos(cursor, textSize, font, 0, 0);
 
-        cursorPos = centerTextPos(cursor, textSize, font);
+        if(textLen == 0) {
+            textPos = (Vector2){smoothing(203.000275f, textPos.x, SMOOTHING),smoothing(100.000206f, textPos.y, SMOOTHING)};
+            cursorPos = (Vector2){smoothing(auxCursor1.x, cursorPos.x, SMOOTHING), smoothing(auxCursor1.y, cursorPos.y, SMOOTHING)};
+
+        }
+        else {
+            textPos = (Vector2){smoothing(auxText.x, textPos.x, SMOOTHING), smoothing(auxText.y, textPos.y, SMOOTHING)};
+            cursorPos = centerCursorPos(cursor, textSize, font, auxText.x - textPos.x, auxText.y - textPos.y);
+
+        }
 
         // DRAW
         BeginDrawing();
@@ -136,6 +150,14 @@ int main(int argc, char** argv) {
     return 0;
 }
 
+float lerp(float a, float b, float f) {
+    return a * (1.0 - f) + (b * f);
+}
+
+float smoothing(float a, float b, float s) {
+    return a + (b - a) * s;
+}
+
 Vector2 centerTextLastCharPos(char* text, float textSize, Font font, int lines, int lastLineCount) {
     Vector2 size = MeasureTextEx(font, text, textSize, textSize * SPACING);
     Vector2 charSize = MeasureTextEx(font, &text[strlen(text) - 1], textSize, 0);
@@ -152,11 +174,11 @@ Vector2 centerTextLastCharPos(char* text, float textSize, Font font, int lines, 
     return size;
 }
 
-Vector2 centerTextPos(char* text, float textSize , Font font) {
-    Vector2 size = MeasureTextEx(font, text, textSize, textSize * SPACING);
+Vector2 centerCursorPos(char* cursor, float textSize , Font font, float offsetX, float offsetY) {
+    Vector2 size = MeasureTextEx(font, cursor, textSize, textSize * SPACING);
 
-    size.x = ((float) screenWidth - size.x) / 2;
-    size.y = ((float) screenHeight - size.y) / 2;
+    size.x = ((float) screenWidth - size.x) / 2 - offsetX;
+    size.y = ((float) screenHeight - size.y) / 2 - offsetY;
 
     return size;
 }
@@ -342,6 +364,7 @@ void* controlOperations(void* fileName) {
     else if(IsKeyDown(KEY_X)) {
         text = realloc(text, sizeof(char));
         text[0] = '\0';
+        atChar = 0;
     }
 
     pthread_exit(NULL);
