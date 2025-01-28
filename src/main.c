@@ -154,14 +154,13 @@ Line update_current_line(Cursor cursor, Text text) { // to be tested
 
     // go to the current line
 
-    while ((line_pointer = strchr(line_pointer, '\n')) != NULL && line_pointer && count < cursor.current_ln_id) {
+    while ((line_pointer = strchr(line_pointer, '\n')) != NULL && line_pointer && count <= cursor.current_ln_id) {
         count++;
         line_pointer++;
     }
 
-    int ln_size = 0;
-    char *last_line_pointer = line_pointer;
-
+    int ln_size = 1;
+    char *last_line_pointer = line_pointer + sizeof(char);
     //get the length of the line
 
     while(last_line_pointer != NULL && *last_line_pointer != '\0' && *last_line_pointer != '\n') {
@@ -170,8 +169,8 @@ Line update_current_line(Cursor cursor, Text text) { // to be tested
     }
 
     Line line = current_line = (Line) {
-        line_pointer,
-        last_line_pointer,
+        line_pointer++,
+        last_line_pointer--,
         ln_size
     };
 
