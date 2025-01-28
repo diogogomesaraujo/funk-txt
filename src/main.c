@@ -5,11 +5,11 @@
 #include <string.h>
 
 typedef struct {
+    const char* txt;
     float abs_pos;
     Vector2 rel_pos;
     int current_ln_id;
     bool show;
-    const char* txt;
 } Cursor;
 
 typedef struct {
@@ -71,14 +71,15 @@ void setup(int argc, char** argv) {
     font = LoadFontEx("fonts/VictorMono-Regular.ttf", text.font_size, 0, 250);
 
     cursor = (Cursor) {
+        "|",
         0,
-        get_cursor_pos(text, current_line),
+        (Vector2){0,0},
         1,
         true,
-        "|"
     };
 
     current_line = update_current_line(cursor, text);
+    cursor.rel_pos = get_cursor_pos(text, current_line);
 }
 
 void destroy() {
@@ -149,6 +150,13 @@ int ln_count(char* str) {
 }
 
 Line update_current_line(Cursor cursor, Text text) { // to be tested
+    if(text.str == NULL) {
+        Line line = current_line = (Line) {
+            text.str,
+            text.str,
+            0
+        };
+    }
     int count = 0;
     char *line_pointer = text.str;
 
@@ -159,7 +167,7 @@ Line update_current_line(Cursor cursor, Text text) { // to be tested
         line_pointer++;
     }
 
-    int ln_size = 1;
+    int ln_size = 0;
     char *last_line_pointer = line_pointer + sizeof(char);
     //get the length of the line
 
@@ -191,19 +199,3 @@ Vector2 get_cursor_pos(Text text, Line current_line) {
 
     return cursor_pos;
 }
-
-/*Vector2 centerTextLastCharPos(char* text, float textSize, Font font, int lines, int lastLineCount) {
-    Vector2 size = MeasureTextEx(font, text, textSize, textSize * SPACING);
-    Vector2 charSize = MeasureTextEx(font, &text[strlen(text) - 1], textSize, 0);
-
-    float lineWidth = 0;
-    float lineHeight = size.y / lines;
-
-    if (charSize.y == size.y) lineWidth = size.x;
-    if(lastLineCount != 0) lineWidth = (lastLineCount - 1 - atChar) * charSize.x + (lastLineCount - 2 - atChar) * textSize * SPACING;
-
-    size.x = ((float) screenWidth) / 2 - lineWidth - textSize * SPACING;
-    size.y = ((float) screenHeight - lineHeight) / 2 - lineHeight * (lines - 1);
-
-    return size;
-    }*/
