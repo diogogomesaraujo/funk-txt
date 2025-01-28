@@ -32,19 +32,22 @@ typedef struct {
 }Text;
 
 typedef struct {
-    const char* str;
-    int abs_pos;
-} Cursor;
-
-typedef struct {
     char* start;
     char* end;
     int len;
 } Line;
 
+typedef struct {
+    const char* str;
+    Line current_line;
+    int abs_pos;
+    Vector2 rel_pos;
+    int count;
+    bool show;
+} Cursor;
+
 Text text;
-int count = 0;
-bool show = true;
+Cursor cursor;
 float atChar = 0; //FROM LAST CHAR
 int lastLineCount;
 int screenWidth = SCREEN_WIDTH;
@@ -54,7 +57,7 @@ Vector2 centerTextLastCharPos(Text text, Font font, int lastLineCount);
 Vector2 centerCursorPos(char* cursor, float textSize, Font font, float offsetX, float offsetY);
 float textSizeFromLen(int textLen);
 char* textHandler(Text text);
-void showCursor(char* cursor, Vector2 cursorPos, float textSize, Font font);
+void showCursorAndUpdate(float textSize, Font font);
 void* readTextFromFile(void* f);
 void* controlOperations(void* fileName);
 void* handleLinesAndCount();
@@ -93,8 +96,10 @@ int main(int argc, char** argv) {
     text.pos = centerTextLastCharPos(text, font, 0);
 
     // CURSOR
-    char* cursor = "|";
-    Vector2 cursorPos = centerCursorPos(cursor, text.font_size, font, 0, 0);
+    cursor.str = "|";
+    cursor.rel_pos = centerCursorPos((char*) cursor.str, text.font_size, font, 0, 0);
+    cursor.count = 0;
+    cursor.show = true;
 
     // RENDER
     while(!WindowShouldClose()) {
@@ -115,8 +120,8 @@ int main(int argc, char** argv) {
         if(changedText != text.str) {
             free(text.str);
             text.str = changedText;
-            show = true;
-            count = 0;
+            cursor.show = true;
+            cursor.count = 0;
         }
 
         pthread_t handleText;
@@ -133,16 +138,16 @@ int main(int argc, char** argv) {
 
         text.font_size = smoothing(textSizeFromLen(text.len), text.font_size, SMOOTHING);
         Vector2 auxText = centerTextLastCharPos(text, font, lastLineCount);
-        Vector2 auxCursor1 = centerCursorPos(cursor, text.font_size, font, 0, 0);
+        Vector2 auxCursor1 = centerCursorPos((char*)cursor.str, text.font_size, font, 0, 0);
 
         if(text.len == 0) {
             text.pos = (Vector2){smoothing(203.000275f, text.pos.x, SMOOTHING),smoothing(100.000206f, text.pos.y, SMOOTHING)};
-            cursorPos = (Vector2){smoothing(auxCursor1.x, cursorPos.x, SMOOTHING), smoothing(auxCursor1.y, cursorPos.y, SMOOTHING)};
+            cursor.rel_pos = (Vector2){smoothing(auxCursor1.x, cursor.rel_pos.x, SMOOTHING), smoothing(auxCursor1.y, cursor.rel_pos.y, SMOOTHING)};
 
         }
         else {
             text.pos = (Vector2){smoothing(auxText.x, text.pos.x, SMOOTHING), smoothing(auxText.y, text.pos.y, SMOOTHING)};
-            cursorPos = centerCursorPos(cursor, text.font_size, font, auxText.x - text.pos.x, auxText.y - text.pos.y);
+            cursor.rel_pos = centerCursorPos((char*) cursor.str, text.font_size, font, auxText.x - text.pos.x, auxText.y - text.pos.y);
 
         }
 
@@ -153,7 +158,7 @@ int main(int argc, char** argv) {
 
         DrawTextEx(font, text.str, (Vector2) {text.pos.x, text.pos.y}, text.font_size, text.font_size * SPACING, TEXT_COLOR);
 
-        showCursor(cursor, cursorPos, text.font_size, font);
+        showCursorAndUpdate(text.font_size, font);
 
         EndDrawing();
     }
@@ -326,24 +331,24 @@ char* textHandler(Text text) {
     return text.str;
 }
 
-void showCursor(char* cursor, Vector2 cursorPos, float textSize, Font font) {
-    if (count < CURSOR_RATE && show) {
-        DrawTextEx(font, cursor, cursorPos, textSize, textSize * SPACING, CURSOR_COLOR);
-        count++;
+void showCursorAndUpdate(float textSize, Font font) {
+    if (cursor.count < CURSOR_RATE && cursor.show) {
+        DrawTextEx(font, cursor.str, cursor.rel_pos, textSize, textSize * SPACING, CURSOR_COLOR);
+        cursor.count++;
         return;
     }
-    else if (show) {
-        show = false;
-        count = 0;
+    else if (cursor.show) {
+        cursor.show = false;
+        cursor.count = 0;
         return;
     }
-    else if (count < CURSOR_RATE && !show) {
-        count++;
+    else if (cursor.count < CURSOR_RATE && !cursor.show) {
+        cursor.count++;
         return;
     }
     else {
-        show = true;
-        count = 0;
+        cursor.show = true;
+        cursor.count = 0;
         return;
     }
 }
