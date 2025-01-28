@@ -8,19 +8,13 @@
 
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
-
 #define TEXT_SIZE 400.
 #define SPACING 0.05
-
 #define CURSOR_RATE 30
-
 #define BACKGROUND_COLOR (Color) {0x28,0x28,0x28,0xff}
 #define TEXT_COLOR (Color) {0xef,0xf1,0xf5,0xff}
 #define CURSOR_COLOR (Color) {0x6d,0x9d,0x97,0xff}
-
-#define BUF_SIZE 100
 #define FILE_NAME "txt"
-
 #define SMOOTHING 0.95f
 
 char* text;
@@ -51,7 +45,7 @@ int main(int argc, char** argv) {
         fileName = argv[1];
     }
 
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, fileName);
     SetTargetFPS(60);
 
@@ -150,10 +144,6 @@ int main(int argc, char** argv) {
     UnloadFont(font);
 
     return 0;
-}
-
-float lerp(float a, float b, float f) {
-    return a * (1.0 - f) + (b * f);
 }
 
 float smoothing(float a, float b, float s) {
@@ -377,7 +367,7 @@ void* handleLinesAndCount() {
     char *linePointer = text;
     char *lastLinePointer = NULL;
 
-    while ((linePointer = strchr(linePointer, '\n')) != NULL) {
+    while ((linePointer = strchr(linePointer, '\n')) != NULL && linePointer) {
         lastLinePointer = linePointer;
 
         lines++;
