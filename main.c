@@ -6,22 +6,21 @@
 #include <stdio.h>
 #include <pthread.h>
 
+#define FILE_NAME "funk.txt"
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
-
 #define TEXT_SIZE 400.
 #define SPACING 0.05
-
 #define CURSOR_RATE 30
-
+#define SMOOTHING 0.95f
 #define BACKGROUND_COLOR (Color) {0x28,0x28,0x28,0xff}
 #define TEXT_COLOR (Color) {0xef,0xf1,0xf5,0xff}
 #define CURSOR_COLOR (Color) {0x6d,0x9d,0x97,0xff}
 
-#define BUF_SIZE 100
-#define FILE_NAME "txt"
-
-#define SMOOTHING 0.95f
+typedef struct {
+    int width;
+    int height;
+} Editor;
 
 typedef struct {
     char* str;
@@ -39,7 +38,6 @@ typedef struct {
 
 typedef struct {
     const char* str;
-    Line current_line;
     int abs_pos;
     Vector2 rel_pos;
     int count;
@@ -48,21 +46,19 @@ typedef struct {
 
 Text text;
 Cursor cursor;
-float atChar = 0; //FROM LAST CHAR
-int lastLineCount;
-int screenWidth = SCREEN_WIDTH;
-int screenHeight = SCREEN_HEIGHT;
+Editor editor;
+Line currentLine;
 
-Vector2 centerTextLastCharPos(Text text, Font font, int lastLineCount);
-Vector2 centerCursorPos(char* cursor, float textSize, Font font, float offsetX, float offsetY);
-float textSizeFromLen(int textLen);
-char* textHandler(Text text);
-void showCursorAndUpdate(float textSize, Font font);
-void* readTextFromFile(void* f);
-void* controlOperations(void* fileName);
 void* handleLinesAndCount();
+char* textHandler(Text text);
+void* readTextFromFile(void* f);
+float textSizeFromLen(int textLen);
+void* controlOperations(void* fileName);
 float lerp(float a, float b, float f);
 float smoothing(float a, float b, float s);
+void showCursorAndUpdate(float textSize, Font font);
+Vector2 centerTextPos(Text text, Font font, int lastLineCount);
+Vector2 centerCursorPos(char* cursor, float textSize, Font font, float offsetX, float offsetY);
 
 int main(int argc, char** argv) {
     // SETUP
@@ -93,21 +89,26 @@ int main(int argc, char** argv) {
 
     text.font_size = textSizeFromLen(text.len);
     text.line_count = 1;
-    text.pos = centerTextLastCharPos(text, font, 0);
+    text.pos = centerTextPos(text, font, 0);
 
     // CURSOR
     cursor.str = "|";
+    cursor.abs_pos = 0;
     cursor.rel_pos = centerCursorPos((char*) cursor.str, text.font_size, font, 0, 0);
     cursor.count = 0;
     cursor.show = true;
+
+    // EDITOR
+    editor.width = SCREEN_WIDTH;
+    editor.height = SCREEN_HEIGHT;
 
     // RENDER
     while(!WindowShouldClose()) {
         if(IsKeyPressed(KEY_ESCAPE)) return 0;
 
-        if (screenWidth != GetScreenWidth() || screenHeight != GetScreenHeight()) {
-            screenWidth = GetScreenWidth();
-            screenHeight = GetScreenHeight();
+        if (editor.width != GetScreenWidth() || editor.height != GetScreenHeight()) {
+            editor.width = GetScreenWidth();
+            editor.height = GetScreenHeight();
         }
 
         if(IsKeyDown(KEY_LEFT_CONTROL)) {
@@ -131,13 +132,21 @@ int main(int argc, char** argv) {
 
         text.len = strlen(text.str);
 
-        if(lastLineCount == 0) lastLineCount = text.len + 1;
+        if(currentLine.len == 0) currentLine.len = text.len + 1;
 
-        if(IsKeyPressed(KEY_LEFT) && lastLineCount - atChar - 1 > 0) atChar++;
-        if(IsKeyPressed(KEY_RIGHT) && atChar > 0) atChar--;
+        if(IsKeyPressed(KEY_LEFT) && currentLine.len - cursor.abs_pos - 1 > 0) {
+            cursor.abs_pos++;
+            cursor.show = true;
+            cursor.count = 0;
+        }
+        if(IsKeyPressed(KEY_RIGHT) && cursor.abs_pos > 0) {
+            cursor.abs_pos--;
+            cursor.show = true;
+            cursor.count = 0;
+        }
 
         text.font_size = smoothing(textSizeFromLen(text.len), text.font_size, SMOOTHING);
-        Vector2 auxText = centerTextLastCharPos(text, font, lastLineCount);
+        Vector2 auxText = centerTextPos(text, font, currentLine.len);
         Vector2 auxCursor1 = centerCursorPos((char*)cursor.str, text.font_size, font, 0, 0);
 
         if(text.len == 0) {
@@ -181,7 +190,7 @@ float smoothing(float a, float b, float s) {
     return a + (b - a) * s;
 }
 
-Vector2 centerTextLastCharPos(Text text, Font font, int lastLineCount) {
+Vector2 centerTextPos(Text text, Font font, int lastLineCount) {
     Vector2 size = MeasureTextEx(font, text.str, text.font_size, text.font_size * SPACING);
     Vector2 charSize = MeasureTextEx(font, &text.str[text.len - 1], text.font_size, 0);
 
@@ -189,10 +198,10 @@ Vector2 centerTextLastCharPos(Text text, Font font, int lastLineCount) {
     float lineHeight = size.y / text.line_count;
 
     if (charSize.y == size.y) lineWidth = size.x;
-    if(lastLineCount != 0) lineWidth = (lastLineCount - 1 - atChar) * charSize.x + (lastLineCount - 2 - atChar) * text.font_size * SPACING;
+    if(lastLineCount != 0) lineWidth = (lastLineCount - 1 - cursor.abs_pos) * charSize.x + (lastLineCount - 2 - cursor.abs_pos) * text.font_size * SPACING;
 
-    size.x = ((float) screenWidth) / 2 - lineWidth - text.font_size * SPACING;
-    size.y = ((float) screenHeight - lineHeight) / 2 - lineHeight * (text.line_count - 1);
+    size.x = ((float) editor.width) / 2 - lineWidth - text.font_size * SPACING;
+    size.y = ((float) editor.height - lineHeight) / 2 - lineHeight * (text.line_count - 1);
 
     return size;
 }
@@ -200,8 +209,8 @@ Vector2 centerTextLastCharPos(Text text, Font font, int lastLineCount) {
 Vector2 centerCursorPos(char* cursor, float textSize , Font font, float offsetX, float offsetY) {
     Vector2 size = MeasureTextEx(font, cursor, textSize, textSize * SPACING);
 
-    size.x = ((float) screenWidth - size.x) / 2 - offsetX;
-    size.y = ((float) screenHeight - size.y) / 2 - offsetY;
+    size.x = ((float) editor.width - size.x) / 2 - offsetX;
+    size.y = ((float) editor.height - size.y) / 2 - offsetY;
 
     return size;
 }
@@ -212,9 +221,9 @@ float textSizeFromLen(int textLen) {
 }
 
 char* textHandler(Text text) {
-    if(IsKeyPressed(KEY_BACKSPACE) && text.len - atChar > 0) {
-        if(atChar == 0) {
-            atChar = 0;
+    if(IsKeyPressed(KEY_BACKSPACE) && text.len - cursor.abs_pos > 0) {
+        if(cursor.abs_pos == 0) {
+            cursor.abs_pos = 0;
 
             char* changedText = malloc(sizeof(char) * (text.len));
             memcpy(changedText, text.str, text.len - 1);
@@ -224,38 +233,38 @@ char* textHandler(Text text) {
             return changedText;
         } else {
             char* changedText = malloc(sizeof(char) * (text.len));
-            strncpy(changedText, text.str, text.len - atChar - 1);
+            strncpy(changedText, text.str, text.len - cursor.abs_pos - 1);
 
-            strncpy(&changedText[text.len - (int) atChar - 1], &text.str[text.len - (int) atChar], atChar + 1);
+            strncpy(&changedText[text.len - (int) cursor.abs_pos - 1], &text.str[text.len - (int) cursor.abs_pos], cursor.abs_pos + 1);
 
             return changedText;
         }
     }
 
     if(IsKeyPressed(KEY_SPACE)) {
-        if(atChar == 0) {
+        if(cursor.abs_pos == 0) {
             char* changedText = malloc(sizeof(char) * (text.len + 2));
             strncpy(changedText, text.str, text.len);
 
             changedText[text.len] = ' ';
 
-            atChar = 0;
+            cursor.abs_pos = 0;
 
             return changedText;
         } else {
             char* changedText = malloc(sizeof(char) * (text.len + 2));
-            strncpy(changedText, text.str, text.len - atChar);
+            strncpy(changedText, text.str, text.len - cursor.abs_pos);
 
-            changedText[text.len - (int) atChar] = ' ';
+            changedText[text.len - (int) cursor.abs_pos] = ' ';
 
-            strncpy(&changedText[text.len - (int) atChar + 1], &text.str[text.len - (int) atChar], atChar + 1);
+            strncpy(&changedText[text.len - (int) cursor.abs_pos + 1], &text.str[text.len - (int) cursor.abs_pos], cursor.abs_pos + 1);
 
             return changedText;
         }
     }
 
     if(IsKeyPressed(KEY_TAB)) {
-        if(atChar == 0) {
+        if(cursor.abs_pos == 0) {
             char* changedText = malloc(sizeof(char) * (text.len + 5));
             strncpy(changedText, text.str, text.len);
 
@@ -263,40 +272,40 @@ char* textHandler(Text text) {
                 changedText[i] = ' ';
             }
 
-            atChar = 0;
+            cursor.abs_pos = 0;
 
             return changedText;
         } else {
             char* changedText = malloc(sizeof(char) * (text.len + 5));
-            strncpy(changedText, text.str, text.len - atChar);
+            strncpy(changedText, text.str, text.len - cursor.abs_pos);
 
-            for(int i = text.len - atChar; i < text.len + 4; i++) {
+            for(int i = text.len - cursor.abs_pos; i < text.len + 4; i++) {
                 changedText[i] = ' ';
             }
 
-            strncpy(&changedText[text.len - (int) atChar + 4], &text.str[text.len - (int) atChar], atChar + 1);
+            strncpy(&changedText[text.len - (int) cursor.abs_pos + 4], &text.str[text.len - (int) cursor.abs_pos], cursor.abs_pos + 1);
 
             return changedText;
         }
     }
 
     if(IsKeyPressed(KEY_ENTER)) {
-        if(atChar == 0) {
+        if(cursor.abs_pos == 0) {
             char* changedText = malloc(sizeof(char) * (text.len + 2));
             strncpy(changedText, text.str, text.len);
 
             changedText[text.len] = '\n';
 
-            atChar = 0;
+            cursor.abs_pos = 0;
 
             return changedText;
         } else {
             char* changedText = malloc(sizeof(char) * (text.len + 2));
-            strncpy(changedText, text.str, text.len - atChar);
+            strncpy(changedText, text.str, text.len - cursor.abs_pos);
 
-            changedText[text.len - (int) atChar] = '\n';
+            changedText[text.len - (int) cursor.abs_pos] = '\n';
 
-            strncpy(&changedText[text.len - (int) atChar + 1], &text.str[text.len - (int) atChar], atChar + 1);
+            strncpy(&changedText[text.len - (int) cursor.abs_pos + 1], &text.str[text.len - (int) cursor.abs_pos], cursor.abs_pos + 1);
 
             return changedText;
         }
@@ -305,23 +314,23 @@ char* textHandler(Text text) {
     int key;
 
     while ((key = GetCharPressed()) != 0) { // wait for char to read the continue!!
-        if(atChar == 0) {
+        if(cursor.abs_pos == 0) {
             char* changedText = malloc(sizeof(char) * (text.len + 2));
             strncpy(changedText, text.str, text.len);
 
             changedText[text.len] = key;
             changedText[text.len + 1] = '\0';
 
-            atChar = 0;
+            cursor.abs_pos = 0;
 
             return changedText;
         } else {
             char* changedText = malloc(sizeof(char) * (text.len + 2));
-            strncpy(changedText, text.str, text.len - atChar);
+            strncpy(changedText, text.str, text.len - cursor.abs_pos);
 
-            changedText[text.len - (int) atChar] = key;
+            changedText[text.len - (int) cursor.abs_pos] = key;
 
-            strncpy(&changedText[text.len - (int) atChar + 1], &text.str[text.len - (int) atChar], atChar + 1);
+            strncpy(&changedText[text.len - (int) cursor.abs_pos + 1], &text.str[text.len - (int) cursor.abs_pos], cursor.abs_pos + 1);
             changedText[strlen(changedText)] = '\0';
 
             return changedText;
@@ -387,7 +396,7 @@ void* controlOperations(void* fileName) {
     else if(IsKeyDown(KEY_X)) {
         text.str = realloc(text.str, sizeof(char));
         text.str[0] = '\0';
-        atChar = 0;
+        cursor.abs_pos = 0;
     }
 
     pthread_exit(NULL);
@@ -405,11 +414,11 @@ void* handleLinesAndCount() {
         linePointer++;
     }
 
-    lastLineCount = 0;
+    currentLine.len = 0;
 
     while(lastLinePointer != NULL && *lastLinePointer != '\0') {
         lastLinePointer++;
-        lastLineCount++;
+        currentLine.len++;
     }
 
     pthread_exit(NULL);

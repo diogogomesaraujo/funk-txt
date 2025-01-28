@@ -26,4 +26,3 @@ run:
 # Clean target
 clean:
 	rm -f $(TARGET)
-	rm -f txt
