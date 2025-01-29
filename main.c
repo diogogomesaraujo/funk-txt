@@ -32,7 +32,7 @@ typedef struct {
 }Text;
 
 typedef struct {
-    // int pos; // 0 is the last line;
+    // int pos;
     // char* start;
     // char* end;
     int len;
@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
     pthread_join(fileRead, NULL);
 
     // TEXT
-    editor.font = LoadFontEx("VictorMono-Regular.ttf", TEXT_SIZE, 0, 250);
+    editor.font = LoadFontEx("fonts/victor.ttf", TEXT_SIZE, 0, 250);
 
     text.font_size = textSizeFromLen(text.len);
     text.line_count = 1;

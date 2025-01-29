@@ -6,9 +6,11 @@
 
 ## Features
 
-- Open and edit text files (`.txt`).
-- Dynamic text scaling based on length.
+- Open and edit text files.
+- Dynamic view of the text.
 - Keyboard support:
+  - **Arrow Right** Move cursor right.
+  - **Arrow Left** Move cursor left.
   - **Backspace**: Delete text.
   - **Enter**: Add a new line.
   - **Tab**: Add spaces.
@@ -19,14 +21,20 @@
 
 1. **Run the program**:
    ```bash
-   ./funk-txt [filename]
+   ./funk [filename]
    ```
-   If no filename is provided, it defaults to `txt`.
+   If no filename is provided, it defaults to `funk.txt`.
 
-2. **Edit and save your text file**.
+2. **Edit and save your text file (Ctrl S)**.
 
 ## Requirements
 
 - Raylib library installed.
 - A C compiler like GCC.
 
+## Future Work
+
+- Up and Down Movement
+- Words per Second
+- Config File for font, font-size, theme
+- File Selection
