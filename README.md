@@ -9,8 +9,8 @@
 - Open and edit text files.
 - Dynamic view of the text.
 - Keyboard support:
-  - **Arrow Right** Move cursor right.
-  - **Arrow Left** Move cursor left.
+  - **Arrow Right**: Move cursor right.
+  - **Arrow Left**: Move cursor left.
   - **Backspace**: Delete text.
   - **Enter**: Add a new line.
   - **Tab**: Add spaces.
