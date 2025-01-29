@@ -20,6 +20,7 @@
 typedef struct {
     int width;
     int height;
+    Font font;
 } Editor;
 
 typedef struct {
@@ -31,8 +32,9 @@ typedef struct {
 }Text;
 
 typedef struct {
-    char* start;
-    char* end;
+    // int pos; // 0 is the last line;
+    // char* start;
+    // char* end;
     int len;
 } Line;
 
@@ -61,13 +63,14 @@ Vector2 centerTextPos(Text text, Font font, int lastLineCount);
 Vector2 centerCursorPos(char* cursor, float textSize, Font font, float offsetX, float offsetY);
 
 int main(int argc, char** argv) {
-    // SETUP
+    // ARGS
     const char* fileName = FILE_NAME;
 
     if (argc > 1) {
         fileName = argv[1];
     }
 
+    // WINDOW CONFIG
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, fileName);
     SetTargetFPS(60);
@@ -82,19 +85,22 @@ int main(int argc, char** argv) {
         f = fopen(fileName, "r+");
     }
 
-    readTextFromFile(f);
+    pthread_t fileRead;
+
+    pthread_create(&fileRead, NULL, readTextFromFile, f);
+    pthread_join(fileRead, NULL);
 
     // TEXT
-    Font font = LoadFontEx("VictorMono-Regular.ttf", TEXT_SIZE, 0, 250);
+    editor.font = LoadFontEx("VictorMono-Regular.ttf", TEXT_SIZE, 0, 250);
 
     text.font_size = textSizeFromLen(text.len);
     text.line_count = 1;
-    text.pos = centerTextPos(text, font, 0);
+    text.pos = centerTextPos(text, editor.font, 0);
 
     // CURSOR
     cursor.str = "|";
     cursor.abs_pos = 0;
-    cursor.rel_pos = centerCursorPos((char*) cursor.str, text.font_size, font, 0, 0);
+    cursor.rel_pos = centerCursorPos((char*) cursor.str, text.font_size, editor.font, 0, 0);
     cursor.count = 0;
     cursor.show = true;
 
@@ -146,17 +152,26 @@ int main(int argc, char** argv) {
         }
 
         text.font_size = smoothing(textSizeFromLen(text.len), text.font_size, SMOOTHING);
-        Vector2 auxText = centerTextPos(text, font, currentLine.len);
-        Vector2 auxCursor1 = centerCursorPos((char*)cursor.str, text.font_size, font, 0, 0);
+        Vector2 auxText = centerTextPos(text, editor.font, currentLine.len);
+        Vector2 auxCursor1 = centerCursorPos((char*)cursor.str, text.font_size, editor.font, 0, 0);
 
         if(text.len == 0) {
-            text.pos = (Vector2){smoothing(203.000275f, text.pos.x, SMOOTHING),smoothing(100.000206f, text.pos.y, SMOOTHING)};
-            cursor.rel_pos = (Vector2){smoothing(auxCursor1.x, cursor.rel_pos.x, SMOOTHING), smoothing(auxCursor1.y, cursor.rel_pos.y, SMOOTHING)};
+            text.pos = (Vector2){
+                smoothing(203.000275f, text.pos.x, SMOOTHING),
+                smoothing(100.000206f, text.pos.y, SMOOTHING)
+            };
+            cursor.rel_pos = (Vector2){
+                smoothing(auxCursor1.x, cursor.rel_pos.x, SMOOTHING),
+                smoothing(auxCursor1.y, cursor.rel_pos.y, SMOOTHING)
+            };
 
         }
         else {
-            text.pos = (Vector2){smoothing(auxText.x, text.pos.x, SMOOTHING), smoothing(auxText.y, text.pos.y, SMOOTHING)};
-            cursor.rel_pos = centerCursorPos((char*) cursor.str, text.font_size, font, auxText.x - text.pos.x, auxText.y - text.pos.y);
+            text.pos = (Vector2){
+                smoothing(auxText.x, text.pos.x, SMOOTHING),
+                smoothing(auxText.y, text.pos.y, SMOOTHING)
+            };
+            cursor.rel_pos = centerCursorPos((char*) cursor.str, text.font_size, editor.font, auxText.x - text.pos.x, auxText.y - text.pos.y);
 
         }
 
@@ -165,9 +180,12 @@ int main(int argc, char** argv) {
 
         ClearBackground(BACKGROUND_COLOR);
 
-        DrawTextEx(font, text.str, (Vector2) {text.pos.x, text.pos.y}, text.font_size, text.font_size * SPACING, TEXT_COLOR);
+        DrawTextEx(editor.font, text.str, (Vector2) {
+            text.pos.x,
+            text.pos.y
+        }, text.font_size, text.font_size * SPACING, TEXT_COLOR);
 
-        showCursorAndUpdate(text.font_size, font);
+        showCursorAndUpdate(text.font_size, editor.font);
 
         EndDrawing();
     }
@@ -177,7 +195,7 @@ int main(int argc, char** argv) {
     CloseWindow();
     free(text.str);
     if (f) fclose(f);
-    UnloadFont(font);
+    UnloadFont(editor.font);
 
     return 0;
 }
@@ -381,7 +399,7 @@ void* readTextFromFile(void* f) {
     text.str = fileText;
     text.len = strlen(fileText);
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 void* controlOperations(void* fileName) {
