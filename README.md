@@ -27,10 +27,22 @@
 
 2. **Edit and save your text file (Ctrl S)**.
 
+## Documentation
+1. **Run to get permission.**:
+  ```bash
+  chmod +x docs.sh
+  ```
+
+2. **Generate documentation**:
+  ```bash
+  ./docs.sh
+  ```
+
 ## Requirements
 
 - Raylib library installed.
 - A C compiler like GCC.
+- (Optional) Doxygen installed for documentation.
 
 ## Future Work
 

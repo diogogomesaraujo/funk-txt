@@ -1,3 +1,8 @@
+/**
+ * @file main.c
+ * @brief This is the only file of the program.
+ */
+
 #include <math.h>
 #include <raylib.h>
 #include <stdbool.h>
@@ -17,33 +22,45 @@
 #define TEXT_COLOR (Color) {0xef,0xf1,0xf5,0xff}
 #define CURSOR_COLOR (Color) {0x6d,0x9d,0x97,0xff}
 
+
+/**
+ * @struct Editor
+ */
 typedef struct {
-    int width;
-    int height;
-    Font font;
+    int width;      /**< Window's width. */
+    int height;     /**< Window's height. */
+    Font font;      /**< Current font. */
 } Editor;
 
+/**
+ * @struct Text
+ */
 typedef struct {
-    char* str;
-    int len;
-    Vector2 pos;
-    float font_size;
-    int line_count;
+    char* str;       /**< Dynamically allocated string. */
+    int len;         /**< String length. */
+    Vector2 pos;     /**< Position of the text on the screen. */
+    float font_size; /**< Size of the text's font. */
+    int line_count;  /**< Text's line count. */
 }Text;
 
+/**
+ * @struct Line
+ */
+#pragma pack(1)
 typedef struct {
-    // int pos;
-    // char* start;
-    // char* end;
-    int len;
+    int len;         /**< Line's length. */
 } Line;
+#pragma pack()
 
+/**
+ * @struct Cursor
+ */
 typedef struct {
-    const char* str;
-    int abs_pos;
-    Vector2 rel_pos;
-    int count;
-    bool show;
+    const char* str; /**< Char used for cursor. */
+    int abs_pos;     /**< Absolute position starting from the end of the text. */
+    Vector2 rel_pos; /**< Relative position to the window. */
+    int count;       /**< Count for the blinking effect. */
+    bool show;       /**< Control variable for the blinking effect. */
 } Cursor;
 
 Text text;
@@ -59,23 +76,33 @@ void* controlOperations(void* fileName);
 float lerp(float a, float b, float f);
 float smoothing(float a, float b, float s);
 void showCursorAndUpdate(float textSize, Font font);
-Vector2 centerTextPos(Text text, Font font, int lastLineCount);
+Vector2 centerTextPos(Text text, Font font);
 Vector2 centerCursorPos(char* cursor, float textSize, Font font, float offsetX, float offsetY);
 
+/**
+ * @brief Has two sections: the setup and the render loop.
+ * @param argc Number of arguments.
+ * @param argv Arguments array.
+ */
 int main(int argc, char** argv) {
     // ARGS
+
     const char* fileName = FILE_NAME;
 
     if (argc > 1) {
         fileName = argv[1];
     }
 
+    //if(realpath(fileName, NULL) != NULL) fileName = realpath(fileName, NULL);
+
     // WINDOW CONFIG
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, fileName);
     SetTargetFPS(60);
 
     // FILE
+
     FILE* f = fopen(fileName, "r+");
 
     if (f == NULL) {
@@ -91,13 +118,15 @@ int main(int argc, char** argv) {
     pthread_join(fileRead, NULL);
 
     // TEXT
+
     editor.font = LoadFontEx("fonts/victor.ttf", TEXT_SIZE, 0, 250);
 
     text.font_size = textSizeFromLen(text.len);
     text.line_count = 1;
-    text.pos = centerTextPos(text, editor.font, 0);
+    text.pos = centerTextPos(text, editor.font);
 
     // CURSOR
+
     cursor.str = "|";
     cursor.abs_pos = 0;
     cursor.rel_pos = centerCursorPos((char*) cursor.str, text.font_size, editor.font, 0, 0);
@@ -105,23 +134,31 @@ int main(int argc, char** argv) {
     cursor.show = true;
 
     // EDITOR
+
     editor.width = SCREEN_WIDTH;
     editor.height = SCREEN_HEIGHT;
 
     // RENDER
+
     while(!WindowShouldClose()) {
         if(IsKeyPressed(KEY_ESCAPE)) return 0;
+
+        // UPDATE WINDOW SIZE
 
         if (editor.width != GetScreenWidth() || editor.height != GetScreenHeight()) {
             editor.width = GetScreenWidth();
             editor.height = GetScreenHeight();
         }
 
+        // HANDLE CONTROL OPERATIONS
+
         if(IsKeyDown(KEY_LEFT_CONTROL)) {
             pthread_t saveFile;
             pthread_create(&saveFile, NULL, controlOperations, (char*)fileName);
             pthread_join(saveFile, NULL);
         }
+
+        // HANDLE TEXT BASED ON INPUT
 
         char* changedText = textHandler(text);
         if(changedText != text.str) {
@@ -138,6 +175,8 @@ int main(int argc, char** argv) {
 
         text.len = strlen(text.str);
 
+        // HANDLE CURSOR
+
         if(currentLine.len == 0) currentLine.len = text.len + 1;
 
         if(IsKeyPressed(KEY_LEFT) && currentLine.len - cursor.abs_pos - 1 > 0) {
@@ -151,8 +190,10 @@ int main(int argc, char** argv) {
             cursor.count = 0;
         }
 
+        // HANDLE MOVEMENT OPERATIONS
+
         text.font_size = smoothing(textSizeFromLen(text.len), text.font_size, SMOOTHING);
-        Vector2 auxText = centerTextPos(text, editor.font, currentLine.len);
+        Vector2 auxText = centerTextPos(text, editor.font);
         Vector2 auxCursor1 = centerCursorPos((char*)cursor.str, text.font_size, editor.font, 0, 0);
 
         if(text.len == 0) {
@@ -175,7 +216,9 @@ int main(int argc, char** argv) {
 
         }
 
+
         // DRAW
+
         BeginDrawing();
 
         ClearBackground(BACKGROUND_COLOR);
@@ -200,15 +243,26 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-float lerp(float a, float b, float f) {
-    return a * (1.0 - f) + (b * f);
-}
-
+/**
+ * @brief Smoothens the movement.
+ *
+ * @param a Beginning coordinate.
+ * @param b Beginning coordinate.
+ * @param s How much it gets smoothened.
+ * @return Smoothened value in between.
+ */
 float smoothing(float a, float b, float s) {
     return a + (b - a) * s;
 }
 
-Vector2 centerTextPos(Text text, Font font, int lastLineCount) {
+/**
+ * @brief Moves the text to the correct position in the screen so it is centered.
+ *
+ * @param text text to be centered.
+ * @param font used for the text.
+ * @return centered text position.
+ */
+Vector2 centerTextPos(Text text, Font font) {
     Vector2 size = MeasureTextEx(font, text.str, text.font_size, text.font_size * SPACING);
     Vector2 charSize = MeasureTextEx(font, &text.str[text.len - 1], text.font_size, 0);
 
@@ -216,7 +270,7 @@ Vector2 centerTextPos(Text text, Font font, int lastLineCount) {
     float lineHeight = size.y / text.line_count;
 
     if (charSize.y == size.y) lineWidth = size.x;
-    if(lastLineCount != 0) lineWidth = (lastLineCount - 1 - cursor.abs_pos) * charSize.x + (lastLineCount - 2 - cursor.abs_pos) * text.font_size * SPACING;
+    if(currentLine.len != 0) lineWidth = (currentLine.len - 1 - cursor.abs_pos) * charSize.x + (currentLine.len - 2 - cursor.abs_pos) * text.font_size * SPACING;
 
     size.x = ((float) editor.width) / 2 - lineWidth - text.font_size * SPACING;
     size.y = ((float) editor.height - lineHeight) / 2 - lineHeight * (text.line_count - 1);
@@ -224,7 +278,17 @@ Vector2 centerTextPos(Text text, Font font, int lastLineCount) {
     return size;
 }
 
-Vector2 centerCursorPos(char* cursor, float textSize , Font font, float offsetX, float offsetY) {
+/**
+ * @brief Moves the cursor to the correct position in the screen so it is centered.
+ *
+ * @param cursor cursor to be centered.
+ * @param textSize text size used for cursor.
+ * @param font used for the text.
+ * @param offsetX offset on the X axis due to smooth movement.
+ * @param offsetY offset on the Y axis due to smooth movement.
+ * @return centered text position.
+ */
+Vector2 centerCursorPos(char* cursor, float textSize, Font font, float offsetX, float offsetY) {
     Vector2 size = MeasureTextEx(font, cursor, textSize, textSize * SPACING);
 
     size.x = ((float) editor.width - size.x) / 2 - offsetX;
@@ -233,11 +297,23 @@ Vector2 centerCursorPos(char* cursor, float textSize , Font font, float offsetX,
     return size;
 }
 
+/**
+ * @brief Gets smaller logarithmically as the text gets bigger.
+ *
+ * @param textLen the length of the text.
+ * @return value of the new text size
+ */
 float textSizeFromLen(int textLen) {
     if (textLen <= 0) return TEXT_SIZE;
     return TEXT_SIZE * ((float)1 / log2f((float) (textLen + 1)));
 }
 
+/**
+ * @brief Update the text based on user input.
+ *
+ * @param text text to be updated.
+ * @return updated text.
+ */
 char* textHandler(Text text) {
     if(IsKeyPressed(KEY_BACKSPACE) && text.len - cursor.abs_pos > 0) {
         if(cursor.abs_pos == 0) {
@@ -358,6 +434,12 @@ char* textHandler(Text text) {
     return text.str;
 }
 
+/**
+ * @brief Show the cursor if previous conditions are met.
+ *
+ * @param textSize size of the text of the cursor.
+ * @param font of the cursor.
+ */
 void showCursorAndUpdate(float textSize, Font font) {
     if (cursor.count < CURSOR_RATE && cursor.show) {
         DrawTextEx(font, cursor.str, cursor.rel_pos, textSize, textSize * SPACING, CURSOR_COLOR);
@@ -380,6 +462,11 @@ void showCursorAndUpdate(float textSize, Font font) {
     }
 }
 
+/**
+ * @brief Read text from a given file.
+ *
+ * @param f file to be read.
+ */
 void* readTextFromFile(void* f) {
     f = (FILE*) f;
     rewind(f); // so it starts from the beggining!!
@@ -402,6 +489,11 @@ void* readTextFromFile(void* f) {
     pthread_exit(NULL);
 }
 
+/**
+ * @brief Operations initiated when control is pressed.
+ *
+ * @param f if S is pressed save text to file.
+ */
 void* controlOperations(void* fileName) {
     fileName = (char*) fileName;
     if(IsKeyPressed(KEY_S)) {
@@ -420,6 +512,9 @@ void* controlOperations(void* fileName) {
     pthread_exit(NULL);
 }
 
+/**
+ * @brief Count the text's lines and the last line's length.
+ */
 void* handleLinesAndCount() {
     text.line_count = 1;
     char *linePointer = text.str;
