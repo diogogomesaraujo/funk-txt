@@ -68,6 +68,7 @@ Cursor cursor;
 Editor editor;
 Line currentLine;
 
+char* insertChar(char ch, unsigned int n);
 void* handleLinesAndCount();
 char* textHandler(Text text);
 void* readTextFromFile(void* f);
@@ -335,100 +336,21 @@ char* textHandler(Text text) {
         }
     }
 
-    if(IsKeyPressed(KEY_SPACE)) {
-        if(cursor.abs_pos == 0) {
-            char* changedText = malloc(sizeof(char) * (text.len + 2));
-            strncpy(changedText, text.str, text.len);
-
-            changedText[text.len] = ' ';
-
-            cursor.abs_pos = 0;
-
-            return changedText;
-        } else {
-            char* changedText = malloc(sizeof(char) * (text.len + 2));
-            strncpy(changedText, text.str, text.len - cursor.abs_pos);
-
-            changedText[text.len - (int) cursor.abs_pos] = ' ';
-
-            strncpy(&changedText[text.len - (int) cursor.abs_pos + 1], &text.str[text.len - (int) cursor.abs_pos], cursor.abs_pos + 1);
-
-            return changedText;
-        }
+    if(IsKeyPressed(KEY_TAB)) {
+        return insertChar(' ', 4);
     }
 
-    if(IsKeyPressed(KEY_TAB)) {
-        if(cursor.abs_pos == 0) {
-            char* changedText = malloc(sizeof(char) * (text.len + 5));
-            strncpy(changedText, text.str, text.len);
-
-            for(int i = text.len; i < text.len + 4; i++) {
-                changedText[i] = ' ';
-            }
-
-            cursor.abs_pos = 0;
-
-            return changedText;
-        } else {
-            char* changedText = malloc(sizeof(char) * (text.len + 5));
-            strncpy(changedText, text.str, text.len - cursor.abs_pos);
-
-            for(int i = text.len - cursor.abs_pos; i < text.len + 4; i++) {
-                changedText[i] = ' ';
-            }
-
-            strncpy(&changedText[text.len - (int) cursor.abs_pos + 4], &text.str[text.len - (int) cursor.abs_pos], cursor.abs_pos + 1);
-
-            return changedText;
-        }
+    if(IsKeyPressed(KEY_SPACE)) {
+        return insertChar(' ', 1);
     }
 
     if(IsKeyPressed(KEY_ENTER)) {
-        if(cursor.abs_pos == 0) {
-            char* changedText = malloc(sizeof(char) * (text.len + 2));
-            strncpy(changedText, text.str, text.len);
-
-            changedText[text.len] = '\n';
-
-            cursor.abs_pos = 0;
-
-            return changedText;
-        } else {
-            char* changedText = malloc(sizeof(char) * (text.len + 2));
-            strncpy(changedText, text.str, text.len - cursor.abs_pos);
-
-            changedText[text.len - (int) cursor.abs_pos] = '\n';
-
-            strncpy(&changedText[text.len - (int) cursor.abs_pos + 1], &text.str[text.len - (int) cursor.abs_pos], cursor.abs_pos + 1);
-
-            return changedText;
-        }
+        return insertChar('\n', 1);
     }
 
     int key;
-
     while ((key = GetCharPressed()) != 0) { // wait for char to read the continue!!
-        if(cursor.abs_pos == 0) {
-            char* changedText = malloc(sizeof(char) * (text.len + 2));
-            strncpy(changedText, text.str, text.len);
-
-            changedText[text.len] = key;
-            changedText[text.len + 1] = '\0';
-
-            cursor.abs_pos = 0;
-
-            return changedText;
-        } else {
-            char* changedText = malloc(sizeof(char) * (text.len + 2));
-            strncpy(changedText, text.str, text.len - cursor.abs_pos);
-
-            changedText[text.len - (int) cursor.abs_pos] = key;
-
-            strncpy(&changedText[text.len - (int) cursor.abs_pos + 1], &text.str[text.len - (int) cursor.abs_pos], cursor.abs_pos + 1);
-            changedText[strlen(changedText)] = '\0';
-
-            return changedText;
-        }
+        return insertChar(key, 1);
     }
 
     return text.str;
@@ -535,4 +457,37 @@ void* handleLinesAndCount() {
     }
 
     pthread_exit(NULL);
+}
+
+/**
+ * @brief Insert char (or multiple) according to the cursor's position.
+ *
+ * @param ch char to insert.
+ * @param n number of chars to insert.
+ * @return changed text.
+ */
+char* insertChar(char ch, unsigned int n) {
+    if(cursor.abs_pos == 0) {
+        char* changedText = malloc(sizeof(char) * (text.len + 1 + n));
+        strncpy(changedText, text.str, text.len);
+
+        for(int i = text.len; i < text.len + n; i++) {
+            changedText[i] = ch;
+        }
+
+        cursor.abs_pos = 0;
+
+        return changedText;
+    } else {
+        char* changedText = malloc(sizeof(char) * (text.len + 1 + n));
+        strncpy(changedText, text.str, text.len - cursor.abs_pos);
+
+        for(int i = text.len - cursor.abs_pos; i < text.len + n; i++) {
+            changedText[i] = ch;
+        }
+
+        strncpy(&changedText[text.len - (int) cursor.abs_pos + n], &text.str[text.len - (int) cursor.abs_pos], cursor.abs_pos + 1);
+
+        return changedText;
+    }
 }
