@@ -22,7 +22,6 @@
 #define TEXT_COLOR (Color) {0xef,0xf1,0xf5,0xff}
 #define CURSOR_COLOR (Color) {0x6d,0x9d,0x97,0xff}
 
-
 /**
  * @struct Editor
  */
@@ -206,7 +205,6 @@ int main(int argc, char** argv) {
                 smoothing(auxCursor1.x, cursor.rel_pos.x, SMOOTHING),
                 smoothing(auxCursor1.y, cursor.rel_pos.y, SMOOTHING)
             };
-
         }
         else {
             text.pos = (Vector2){
@@ -214,7 +212,6 @@ int main(int argc, char** argv) {
                 smoothing(auxText.y, text.pos.y, SMOOTHING)
             };
             cursor.rel_pos = centerCursorPos((char*) cursor.str, text.font_size, editor.font, auxText.x - text.pos.x, auxText.y - text.pos.y);
-
         }
 
 
@@ -475,6 +472,8 @@ char* insertChar(char ch, unsigned int n) {
             changedText[i] = ch;
         }
 
+        changedText[text.len + n] = '\0';
+
         cursor.abs_pos = 0;
 
         return changedText;
@@ -487,6 +486,8 @@ char* insertChar(char ch, unsigned int n) {
         }
 
         strncpy(&changedText[text.len - (int) cursor.abs_pos + n], &text.str[text.len - (int) cursor.abs_pos], cursor.abs_pos + 1);
+
+        changedText[text.len + n] = '\0';
 
         return changedText;
     }
