@@ -46,6 +46,7 @@
 
 ## Future Work
 
+- Glyphs
 - Up and Down Movement
 - Words per Second
 - Config File for font, font-size, theme

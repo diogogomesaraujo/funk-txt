@@ -73,7 +73,6 @@ char* textHandler(Text text);
 void* readTextFromFile(void* f);
 float textSizeFromLen(int textLen);
 void* controlOperations(void* fileName);
-float lerp(float a, float b, float f);
 float smoothing(float a, float b, float s);
 void showCursorAndUpdate(float textSize, Font font);
 Vector2 centerTextPos(Text text, Font font);
@@ -120,6 +119,7 @@ int main(int argc, char** argv) {
     // TEXT
 
     editor.font = LoadFontEx("fonts/victor.ttf", TEXT_SIZE, 0, 250);
+
 
     text.font_size = textSizeFromLen(text.len);
     text.line_count = 1;
@@ -423,7 +423,8 @@ void* controlOperations(void* fileName) {
         }
     }
     else if(IsKeyDown(KEY_X)) {
-        text.str = realloc(text.str, sizeof(char));
+        free(text.str);
+        text.str = malloc(sizeof(char));
         text.str[0] = '\0';
         cursor.abs_pos = 0;
     }
