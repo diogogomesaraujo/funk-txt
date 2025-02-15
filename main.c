@@ -69,7 +69,7 @@ Editor editor;
 Line currentLine;
 
 char* insertChar(char ch, unsigned int n);
-void* handleLinesAndCount();
+void handleLinesAndCount();
 char* textHandler(Text text);
 void* readTextFromFile(void* f);
 float textSizeFromLen(int textLen);
@@ -169,10 +169,7 @@ int main(int argc, char** argv) {
             cursor.count = 0;
         }
 
-        pthread_t handleText;
-
-        pthread_create(&handleText, NULL, handleLinesAndCount, NULL);
-        pthread_join(handleText, NULL);
+        handleLinesAndCount();
 
         text.len = strlen(text.str);
 
@@ -326,6 +323,7 @@ char* textHandler(Text text) {
 
             changedText[text.len - 1] = '\0';
 
+            pthread_mutex_unlock(&text.mut);
             return changedText;
         } else {
             char* changedText = malloc(sizeof(char) * (text.len));
@@ -333,29 +331,33 @@ char* textHandler(Text text) {
 
             strncpy(&changedText[text.len - (int) cursor.abs_pos - 1], &text.str[text.len - (int) cursor.abs_pos], cursor.abs_pos + 1);
 
+            pthread_mutex_unlock(&text.mut);
             return changedText;
         }
     }
 
     if(IsKeyPressed(KEY_TAB)) {
+        pthread_mutex_unlock(&text.mut);
         return insertChar(' ', 4);
     }
 
     if(IsKeyPressed(KEY_SPACE)) {
+        pthread_mutex_unlock(&text.mut);
         return insertChar(' ', 1);
     }
 
     if(IsKeyPressed(KEY_ENTER)) {
+        pthread_mutex_unlock(&text.mut);
         return insertChar('\n', 1);
     }
 
     int key;
     while ((key = GetCharPressed()) != 0) { // wait for char to read the continue!!
+        pthread_mutex_unlock(&text.mut);
         return insertChar(key, 1);
     }
 
     pthread_mutex_unlock(&text.mut);
-
     return text.str;
 }
 
@@ -441,7 +443,7 @@ void* controlOperations(void* fileName) {
 /**
  * @brief Count the text's lines and the last line's length.
  */
-void* handleLinesAndCount() {
+void handleLinesAndCount() {
     pthread_mutex_lock(&text.mut);
 
     text.line_count = 1;
@@ -463,8 +465,6 @@ void* handleLinesAndCount() {
     }
 
     pthread_mutex_unlock(&text.mut);
-
-    pthread_exit(NULL);
 }
 
 /**
