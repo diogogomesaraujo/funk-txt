@@ -40,6 +40,7 @@ typedef struct {
     Vector2 pos;     /**< Position of the text on the screen. */
     float font_size; /**< Size of the text's font. */
     int line_count;  /**< Text's line count. */
+    pthread_mutex_t mut;
 }Text;
 
 /**
@@ -120,10 +121,10 @@ int main(int argc, char** argv) {
 
     editor.font = LoadFontEx("fonts/victor.ttf", TEXT_SIZE, 0, 250);
 
-
     text.font_size = textSizeFromLen(text.len);
     text.line_count = 1;
     text.pos = centerTextPos(text, editor.font);
+    pthread_mutex_init(&text.mut, NULL);
 
     // CURSOR
 
@@ -234,9 +235,10 @@ int main(int argc, char** argv) {
     // TERMINATE
 
     CloseWindow();
-    free(text.str);
+    if (text.str != NULL) free(text.str);
     if (f) fclose(f);
     UnloadFont(editor.font);
+    pthread_mutex_destroy(&text.mut);
 
     return 0;
 }
@@ -313,6 +315,8 @@ float textSizeFromLen(int textLen) {
  * @return updated text.
  */
 char* textHandler(Text text) {
+    pthread_mutex_lock(&text.mut);
+
     if(IsKeyPressed(KEY_BACKSPACE) && text.len - cursor.abs_pos > 0) {
         if(cursor.abs_pos == 0) {
             cursor.abs_pos = 0;
@@ -349,6 +353,8 @@ char* textHandler(Text text) {
     while ((key = GetCharPressed()) != 0) { // wait for char to read the continue!!
         return insertChar(key, 1);
     }
+
+    pthread_mutex_unlock(&text.mut);
 
     return text.str;
 }
@@ -423,7 +429,7 @@ void* controlOperations(void* fileName) {
         }
     }
     else if(IsKeyDown(KEY_X)) {
-        free(text.str);
+        if (text.str != NULL) free(text.str);
         text.str = malloc(sizeof(char));
         text.str[0] = '\0';
         cursor.abs_pos = 0;
@@ -436,6 +442,8 @@ void* controlOperations(void* fileName) {
  * @brief Count the text's lines and the last line's length.
  */
 void* handleLinesAndCount() {
+    pthread_mutex_lock(&text.mut);
+
     text.line_count = 1;
     char *linePointer = text.str;
     char *lastLinePointer = NULL;
@@ -453,6 +461,8 @@ void* handleLinesAndCount() {
         lastLinePointer++;
         currentLine.len++;
     }
+
+    pthread_mutex_unlock(&text.mut);
 
     pthread_exit(NULL);
 }
